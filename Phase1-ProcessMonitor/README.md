@@ -123,6 +123,33 @@ process) · `ALERT` (injection, or task-port access to the protected process).
 
 ---
 
+## See it react (test harness)
+
+`test/demo_detections.sh` generates the two headline detections so you can
+watch the monitor fire. Use two terminals:
+
+```sh
+# Terminal A — run the monitor, protecting a process named "vgtarget"
+make
+sudo ./build/vanguard_monitor vgtarget
+
+# Terminal B — trigger the detections
+./test/demo_detections.sh
+```
+
+The script (safe: a harmless demo dylib + a renamed copy of `/bin/sleep`) does
+two things and you should see one `ALERT` in Terminal A for each:
+
+1. **Task-port access** — runs `vmmap` against the protected process
+   (`task_for_pid`, the `OpenProcess` analogue) →
+   `ALERT GET_TASK ... <== PROTECTED PROCESS`.
+2. **dylib injection** — execs a binary with `DYLD_INSERT_LIBRARIES` set →
+   `ALERT EXEC+INJECT ... via=DYLD_INSERT_LIBRARIES=...`.
+
+Note it copies the binaries off the sealed system volume on purpose: SIP
+strips `DYLD_*` from platform binaries, so the injection must target a
+non-system binary to be observable (a useful real-world caveat in itself).
+
 ## Files
 
 ```
@@ -130,6 +157,9 @@ Phase1-ProcessMonitor/
 ├── src/vanguard_monitor.c            # the monitor (heavily commented)
 ├── entitlements/vanguard.entitlements# the one ES entitlement, explained
 ├── Makefile                          # build + ad-hoc codesign + run
+├── test/
+│   ├── demo_detections.sh            # generate task-port + injection alerts
+│   └── demo_inject.c                 # harmless demo dylib for the injection test
 └── README.md                         # this file
 ```
 
