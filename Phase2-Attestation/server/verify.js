@@ -243,7 +243,26 @@ export function verifyAssertion(assertionB64, clientDataB64, stored) {
       `replay/counter regression: got ${parsed.signCount}, have ${stored.signCount}`,
     );
 
-  return { signCount: parsed.signCount };
+  // Step 5: extract the Phase 1 telemetry hash from clientData (if present).
+  // The hash's integrity is guaranteed by the ECDSA signature already verified
+  // above — the entire clientData blob, including telemetryHash, is covered by
+  // the SEP signature. No separate crypto check is needed here; we extract,
+  // log, and pass it through for the caller to include in the response.
+  let telemetryHash = null;
+  try {
+    const clientDataJson = JSON.parse(clientData.toString("utf8"));
+    const raw = clientDataJson.telemetryHash;
+    if (raw && raw !== "none") {
+      telemetryHash = raw;
+      console.log(`[telemetry] bound hash: ${telemetryHash}`);
+    } else {
+      console.log("[telemetry] no hash present (Phase 1 not running or hash=none)");
+    }
+  } catch {
+    // clientData is not JSON (unexpected) — carry on without a telemetry hash.
+  }
+
+  return { signCount: parsed.signCount, telemetryHash };
 }
 
 /*

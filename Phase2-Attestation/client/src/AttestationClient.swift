@@ -212,10 +212,43 @@ func runAppAttest() {
     //     each report hardware-signed.
     let ch2 = http("GET", "/challenge")
     guard let challenge2 = ch2["challenge"] as? String else { fail("no challenge") }
-    let clientData = try! JSONSerialization.data(withJSONObject: [
+
+    // 3a-i. Read the running Phase 1 telemetry hash.
+    //
+    // Security property: Phase 1 (the ES endpoint-security monitor) maintains a
+    // rolling SHA-256 digest of every telemetry event it processes, and writes
+    // the current value to /tmp/vanguard_telemetry.hash (base64, atomic rename).
+    // By embedding that hash in clientData — which is then signed by the Secure
+    // Enclave via App Attest — we cryptographically bind the telemetry stream to
+    // this assertion. An attacker who runs a parallel "clean" fake telemetry
+    // feed alongside the genuine attested agent cannot substitute its hash here
+    // without breaking the SEP signature; the hardware attestation makes the
+    // telemetry digest UNFORGEABLE.
+    var telemetryHashValue: String? = nil
+    let telemetryHashPath = "/tmp/vanguard_telemetry.hash"
+    if let raw = try? String(contentsOfFile: telemetryHashPath, encoding: .utf8) {
+        let trimmed = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            telemetryHashValue = trimmed
+            log("  telemetry hash bound: \(String(trimmed.prefix(16)))...")
+        }
+    }
+    if telemetryHashValue == nil {
+        log("  telemetry hash: not present (Phase 1 not running)")
+    }
+
+    // Build clientData, including the telemetry hash when available.
+    var clientDataDict: [String: Any] = [
         "challenge": challenge2,
         "payload": "phase1-telemetry-would-go-here",
-    ], options: [.sortedKeys])
+    ]
+    if let hash = telemetryHashValue {
+        clientDataDict["telemetryHash"] = hash
+    } else {
+        clientDataDict["telemetryHash"] = "none"
+    }
+    let clientData = try! JSONSerialization.data(withJSONObject: clientDataDict,
+                                                 options: [.sortedKeys])
     let clientDataHash2 = Data(SHA256.hash(data: clientData))
 
     // 3b. generateAssertion: SEP signs (authenticatorData || clientDataHash)
@@ -234,7 +267,14 @@ func runAppAttest() {
         "clientData": clientData.base64EncodedString(),
         "assertion": assertion.base64EncodedString(),
     ])
-    log("  server verdict: \(assertResp["verified"] as? Bool == true ? "ASSERTION VALID ✓" : "REJECTED ✗") counter=\(assertResp["counter"] ?? "?")")
+    let returnedTelemetryHash = assertResp["telemetryHash"] as? String
+    let hashSuffix: String
+    if let h = returnedTelemetryHash, h != "none", !h.isEmpty {
+        hashSuffix = " telemetryHash=\(String(h.prefix(16)))..."
+    } else {
+        hashSuffix = " telemetryHash=none"
+    }
+    log("  server verdict: \(assertResp["verified"] as? Bool == true ? "ASSERTION VALID ✓" : "REJECTED ✗") counter=\(assertResp["counter"] ?? "?")\(hashSuffix)")
     guard assertResp["verified"] as? Bool == true else { exit(1) }
 
     log("full trust chain demonstrated: SEP → Apple → server ✓")

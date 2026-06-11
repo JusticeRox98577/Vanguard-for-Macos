@@ -123,14 +123,18 @@ const server = http.createServer(async (req, res) => {
       if (!stored)
         return json(res, 400, { error: "unknown keyId — attest first" });
 
-      const { signCount } = verifyAssertion(assertion, clientData, {
+      const { signCount, telemetryHash } = verifyAssertion(assertion, clientData, {
         ...stored,
         teamId: EXPECTED.teamId,
         bundleId: EXPECTED.bundleId,
       });
 
       stored.signCount = signCount; // persist the advanced counter
-      return json(res, 200, { verified: true, counter: signCount });
+      return json(res, 200, {
+        verified: true,
+        counter: signCount,
+        telemetryHash: telemetryHash ?? null,
+      });
     }
 
     if (req.method === "GET" && req.url === "/health") {
