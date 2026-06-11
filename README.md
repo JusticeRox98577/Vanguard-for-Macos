@@ -26,7 +26,7 @@ attestation that proves the client and the host are genuine.
 |---|---|---|
 | **1 — Process Monitor** | Endpoint Security client: process lifecycle, task-port (memory) access, dylib-injection detection, timestamped logging. | ✅ Implemented — [`Phase1-ProcessMonitor/`](Phase1-ProcessMonitor/) |
 | **2 — Hardware Attestation** | Secure Enclave key generation + App Attest assertion, verified by a small server. Demonstrates the full client→Apple→server trust chain. | ⏳ Planned |
-| **3 — Documentation** | What this covers vs. what Vanguard covers, honest gap analysis, packaged for a game studio's security team. | ⏳ Planned |
+| **3 — Documentation** | Threat model, architecture, and pitch packaging with honest gap analysis, for a game studio's security team. | 📝 Drafted — [`Phase3-Documentation/`](Phase3-Documentation/) (final pass after Phase 2 is built) |
 
 ## Repository layout
 
@@ -34,11 +34,15 @@ attestation that proves the client and the host are genuine.
 Vanguard-for-Macos/
 ├── README.md                     # this file
 ├── LICENSE                       # MIT
-└── Phase1-ProcessMonitor/        # Phase 1 — Endpoint Security monitor (C)
-    ├── src/vanguard_monitor.c    #   the monitor, heavily commented
-    ├── entitlements/             #   the one ES entitlement, explained
-    ├── Makefile                  #   build + ad-hoc codesign + run
-    └── README.md                 #   build/run, entitlements, anti-cheat mapping
+├── Phase1-ProcessMonitor/        # Phase 1 — Endpoint Security monitor (C)
+│   ├── src/vanguard_monitor.c    #   the monitor, heavily commented
+│   ├── entitlements/             #   the one ES entitlement, explained
+│   ├── Makefile                  #   build + ad-hoc codesign + run
+│   └── README.md                 #   build/run, entitlements, anti-cheat mapping
+└── Phase3-Documentation/         # Phase 3 — research submission (drafted)
+    ├── README.md                 #   executive summary, pitch, perf & privacy
+    ├── THREAT-MODEL.md           #   vectors → mitigations → honest gaps
+    └── ARCHITECTURE.md           #   pillars, platform map, data-flow diagram
 ```
 
 ## Quick start (Phase 1)
