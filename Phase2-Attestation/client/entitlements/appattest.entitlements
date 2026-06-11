@@ -1,26 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!--
-    appattest.entitlements
-    ----------------------------------------------------------------------
-    com.apple.developer.devicecheck.appattest-environment
-        Selects which App Attest environment DCAppAttestService talks to:
-          "development" — attestations chain to Apple's development CA;
-                          use while testing (this file's default).
-          "production"  — required for App Store / Developer ID releases.
-
-    Unlike Phase 1's Endpoint Security entitlement (restricted, granted by
-    Apple per-account), App Attest is available to every paid Apple
-    Developer Program team — but it MUST be carried in a provisioning
-    profile tied to your App ID. Ad-hoc signing is not enough, by design:
-    the app's Team ID + bundle ID are baked into the attestation
-    certificate, which is exactly what lets the server pin "this binary,
-    from this team" — the unforgeable identity at the heart of Phase 2.
-
-    Replace the placeholders below via your Xcode project / signing setup;
-    the application-identifier comes from the provisioning profile itself.
--->
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>com.apple.developer.devicecheck.appattest-environment</key>
