@@ -55,7 +55,23 @@
 #include <EndpointSecurity/EndpointSecurity.h> /* es_* API: the whole point  */
 #include <bsm/libbsm.h>                         /* audit_token_to_pid()       */
 #include <dispatch/dispatch.h>                  /* dispatch_main(), queues    */
-#include <sys/codesign.h>                       /* CS_VALID, CS_ADHOC, ...    */
+
+/*
+ * Code-signing flags. These constants live in xnu's <sys/codesign.h>
+ * (osfmk/kern/cs_blobs.h), a kernel header Apple does NOT ship in the public
+ * macOS SDK -- so we cannot #include it. The values are stable kernel ABI, so
+ * we define the few we use here. Guarded with #ifndef in case a future SDK
+ * exposes them.
+ */
+#ifndef CS_VALID
+#define CS_VALID          0x00000001  /* signature currently valid           */
+#endif
+#ifndef CS_ADHOC
+#define CS_ADHOC          0x00000002  /* ad-hoc signed (no Team ID)           */
+#endif
+#ifndef CS_GET_TASK_ALLOW
+#define CS_GET_TASK_ALLOW 0x00000004  /* allows its task port to be handed out*/
+#endif
 
 #include <errno.h>
 #include <signal.h>
