@@ -73,21 +73,116 @@
 #define CS_GET_TASK_ALLOW 0x00000004  /* allows its task port to be handed out*/
 #endif
 
+#include <CommonCrypto/CommonCrypto.h>  /* CC_SHA256_CTX, CC_SHA256_Update -- part of macOS SDK, no extra link flags */
 #include <errno.h>
+#include <pthread.h>
 #include <signal.h>
 #include <stdbool.h>
+#include <stdatomic.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <unistd.h>
+
+/* -------------------------------------------------------------------------
+ * LOCK-FREE SPSC RING BUFFER
+ * -------------------------------------------------------------------------
+ *
+ * WHY: ES NOTIFY callbacks are delivered on a kernel-managed queue. The ES
+ * subsystem has a finite internal event queue; if a callback takes too long
+ * to return, the kernel's delivery pipeline stalls and events are dropped
+ * by the kernel itself (visible as a sequence-number gap). Logging, hashing,
+ * and file I/O can all block on I/O or scheduling and must therefore NOT
+ * happen on the ES callback thread. The ring buffer decouples the two:
+ *
+ *   ES callback (producer)  --[ring buffer]-->  consumer thread
+ *
+ * The producer fills a slot and returns to the kernel immediately. The
+ * consumer does all the slow work (fprintf, SHA-256 update, rename-write).
+ *
+ * Single-Producer Single-Consumer (SPSC) means we never need a mutex in
+ * the hot path -- the atomic head/tail indices are sufficient for
+ * correctness on the TSO memory model (and on ARM with the acquire/release
+ * ordering we use below).
+ */
+
+#define RING_CAPACITY 1024u   /* must be a power of 2 */
+#define RING_MASK     (RING_CAPACITY - 1u)
+
+/*
+ * vg_event_t: the small, flat snapshot of an event that the producer copies
+ * into the ring. We copy -- never hold a pointer into the es_message_t --
+ * because ES frees the message immediately after the callback returns.
+ */
+typedef struct {
+    char     timestamp[40];
+    char     severity[8];       /* "INFO ", "WATCH", "ALERT" */
+    char     event_type[32];    /* "EXEC", "FORK", "EXIT", "GET_TASK", … */
+    pid_t    pid;
+    pid_t    ppid;
+    char     path[1024];
+    uint32_t signing_flags;
+    char     team_id[20];
+    char     signing_id[256];
+    char     inject_var[256];   /* DYLD_INSERT_LIBRARIES=… or "" */
+} vg_event_t;
+
+typedef struct {
+    vg_event_t      slots[RING_CAPACITY];
+    atomic_size_t   head;   /* producer writes here; consumer reads */
+    atomic_size_t   tail;   /* consumer frees here; producer checks */
+    atomic_size_t   dropped;
+} vg_ring_t;
+
+static vg_ring_t g_ring;
+
+/*
+ * ring_push: called from the ES callback (producer). Returns false and
+ * increments g_ring.dropped if the buffer is full -- we NEVER block.
+ */
+static bool ring_push(const vg_event_t *ev) {
+    size_t head = atomic_load_explicit(&g_ring.head, memory_order_relaxed);
+    size_t tail = atomic_load_explicit(&g_ring.tail, memory_order_acquire);
+
+    if ((head - tail) >= RING_CAPACITY) {
+        atomic_fetch_add_explicit(&g_ring.dropped, 1, memory_order_relaxed);
+        return false;
+    }
+
+    g_ring.slots[head & RING_MASK] = *ev;
+
+    /* Release: make the slot contents visible before the head bump. */
+    atomic_store_explicit(&g_ring.head, head + 1, memory_order_release);
+    return true;
+}
+
+/*
+ * ring_pop: called from the consumer thread. Returns false when empty.
+ */
+static bool ring_pop(vg_event_t *out) {
+    size_t tail = atomic_load_explicit(&g_ring.tail, memory_order_relaxed);
+    size_t head = atomic_load_explicit(&g_ring.head, memory_order_acquire);
+
+    if (tail == head)
+        return false;
+
+    *out = g_ring.slots[tail & RING_MASK];
+
+    /* Release: allow the producer to see the slot as free. */
+    atomic_store_explicit(&g_ring.tail, tail + 1, memory_order_release);
+    return true;
+}
 
 /* ---- Global state -------------------------------------------------------
  * Kept tiny on purpose. g_client is the live ES connection; g_target_name
  * is an optional process name (basename substring) we treat as the
  * "protected" process -- any task-port access to it is escalated to ALERT.
  */
-static es_client_t *g_client = NULL;
+static es_client_t *g_client       = NULL;
 static char         g_target_name[256] = {0};
+static pthread_t    g_consumer_tid;
+static volatile int g_stop_consumer = 0;
 
 /* ---- Tiny logging helpers ----------------------------------------------- */
 
@@ -164,11 +259,189 @@ static bool path_is_target(es_string_token_t path) {
     return strcasestr(pbuf, g_target_name) != NULL;
 }
 
+/* -------------------------------------------------------------------------
+ * SHA-256 TELEMETRY HASH
+ * -------------------------------------------------------------------------
+ *
+ * A running SHA-256 accumulator over every processed event provides a
+ * cryptographic bind between the Phase-1 event stream and Phase-2 (Secure
+ * Enclave / App Attest). Phase 2 can read the current digest from
+ * /tmp/vanguard_telemetry.hash and verify that the stream it received is
+ * the same stream the monitor produced -- without needing to replay all
+ * events.
+ *
+ * We maintain a global CC_SHA256_CTX (g_telemetry_ctx) and update it for
+ * each event. To read the current digest without finalising the running
+ * context (which would close it), we copy the context, finalise the copy,
+ * and base64-encode the 32-byte result.
+ *
+ * Atomic write discipline: write to .tmp then rename() so Phase 2 can
+ * never observe a partial file.
+ */
+
+#define TELEMETRY_HASH_PATH     "/tmp/vanguard_telemetry.hash"
+#define TELEMETRY_HASH_TMP_PATH "/tmp/vanguard_telemetry.hash.tmp"
+
+static CC_SHA256_CTX g_telemetry_ctx;
+
+/*
+ * base64_encode_32: encode exactly 32 bytes to standard base64.
+ * Output is always 44 characters (32 bytes -> ceil(32/3)*4 = 44) with
+ * standard alphabet; no line breaks; NUL-terminated.
+ * `out` must be at least 45 bytes.
+ */
+static void base64_encode_32(const unsigned char *in, char *out) {
+    static const char tbl[] =
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+
+    /* 32 bytes = 10 full 3-byte groups (30 bytes → 40 chars) + 2 remainder bytes (→ 4 chars) = 44 chars */
+    size_t i = 0, o = 0;
+    for (; i + 2 < 32; i += 3) {
+        uint32_t v = ((uint32_t)in[i] << 16) | ((uint32_t)in[i+1] << 8) | in[i+2];
+        out[o++] = tbl[(v >> 18) & 0x3f];
+        out[o++] = tbl[(v >> 12) & 0x3f];
+        out[o++] = tbl[(v >>  6) & 0x3f];
+        out[o++] = tbl[(v      ) & 0x3f];
+    }
+    /* i == 30, 2 remaining bytes (in[30], in[31]) */
+    {
+        uint32_t v = ((uint32_t)in[i] << 16) | ((uint32_t)in[i+1] << 8);
+        out[o++] = tbl[(v >> 18) & 0x3f];
+        out[o++] = tbl[(v >> 12) & 0x3f];
+        out[o++] = tbl[(v >>  6) & 0x3f];
+        out[o++] = '=';
+    }
+    out[o] = '\0';
+}
+
+/*
+ * telemetry_update: called by the consumer thread for each event.
+ * Feeds a canonical record into the running SHA-256 and atomically
+ * refreshes /tmp/vanguard_telemetry.hash.
+ */
+static void telemetry_update(const vg_event_t *ev) {
+    /* Canonical feed string: pipe-separated fields, newline-terminated.
+     * inject_var is intentionally excluded from the canonical hash fields
+     * to keep the format stable across event types that lack it. */
+    char record[2048];
+    int  rlen = snprintf(record, sizeof(record),
+        "%s|%s|%s|%d|%d|%s|%u|%s|%s\n",
+        ev->timestamp,
+        ev->severity,
+        ev->event_type,
+        (int)ev->pid,
+        (int)ev->ppid,
+        ev->path,
+        ev->signing_flags,
+        ev->team_id,
+        ev->signing_id);
+
+    if (rlen <= 0 || (size_t)rlen >= sizeof(record))
+        return;
+
+    CC_SHA256_Update(&g_telemetry_ctx, record, (CC_LONG)rlen);
+
+    /* Snapshot the current digest without closing the running context. */
+    CC_SHA256_CTX snap = g_telemetry_ctx;
+    unsigned char digest[CC_SHA256_DIGEST_LENGTH];
+    CC_SHA256_Final(digest, &snap);
+
+    char b64[48];
+    base64_encode_32(digest, b64);
+
+    /* Atomic write: .tmp -> rename. */
+    FILE *f = fopen(TELEMETRY_HASH_TMP_PATH, "w");
+    if (!f) return;
+    fprintf(f, "%s\n", b64);
+    fclose(f);
+    rename(TELEMETRY_HASH_TMP_PATH, TELEMETRY_HASH_PATH);
+}
+
+/* -------------------------------------------------------------------------
+ * CONSUMER THREAD
+ * -------------------------------------------------------------------------
+ *
+ * Spins on the ring buffer. Uses sched_yield() when empty -- acceptable
+ * for a security daemon where latency matters more than CPU. (A condition
+ * variable could replace the spin if power usage is a concern.)
+ */
+
+/*
+ * emit_event: the actual logging that was previously done inline in the ES
+ * callback. Now runs entirely on the consumer thread, safely decoupled from
+ * the kernel delivery queue.
+ */
+static void emit_event(const vg_event_t *ev) {
+    if (strcmp(ev->event_type, "EXEC") == 0 ||
+        strcmp(ev->event_type, "EXEC+INJECT") == 0) {
+
+        char signbuf[320];
+        snprintf(signbuf, sizeof(signbuf),
+                 "flags=0x%x team=%s id=%s",
+                 ev->signing_flags, ev->team_id, ev->signing_id);
+
+        if (strcmp(ev->event_type, "EXEC+INJECT") == 0) {
+            fprintf(stdout,
+                "[%s] " SEV_ALERT " EXEC+INJECT pid=%d ppid=%d path=%s"
+                "  signing=[%s]  via=%s\n",
+                ev->timestamp, ev->pid, ev->ppid, ev->path,
+                signbuf, ev->inject_var);
+        } else {
+            fprintf(stdout,
+                "[%s] " SEV_INFO  " EXEC        pid=%d ppid=%d path=%s"
+                "  signing=[%s]%s%s\n",
+                ev->timestamp, ev->pid, ev->ppid, ev->path,
+                signbuf,
+                ev->inject_var[0] ? "  dyld-env=" : "",
+                ev->inject_var[0] ? ev->inject_var : "");
+        }
+
+    } else if (strcmp(ev->event_type, "FORK") == 0) {
+        fprintf(stdout, "[%s] " SEV_INFO  " FORK        parent=%d child=%d path=%s\n",
+                ev->timestamp, ev->ppid, ev->pid, ev->path);
+
+    } else if (strcmp(ev->event_type, "EXIT") == 0) {
+        fprintf(stdout, "[%s] " SEV_INFO  " EXIT        pid=%d status=%d path=%s\n",
+                ev->timestamp, ev->pid, (int)ev->ppid /* status stored in ppid field */,
+                ev->path);
+
+    } else {
+        /* GET_TASK / GET_TASK_READ / GET_TASK_INSPECT / GET_TASK_NAME */
+        bool alert = (strcmp(ev->severity, SEV_ALERT) == 0);
+        fprintf(stdout,
+            "[%s] %s %-15s requester=%d(%s) target=%d  requester-signing=[flags=0x%x team=%s id=%s]%s\n",
+            ev->timestamp, ev->severity, ev->event_type,
+            ev->ppid, ev->path,   /* ppid = requester pid, path = requester path */
+            ev->pid,              /* pid  = target pid                           */
+            ev->signing_flags, ev->team_id, ev->signing_id,
+            alert ? "  <== PROTECTED PROCESS" : "");
+    }
+}
+
+static void *consumer_thread(void *arg) {
+    (void)arg;
+    vg_event_t ev;
+
+    while (!g_stop_consumer) {
+        if (ring_pop(&ev)) {
+            emit_event(&ev);
+            telemetry_update(&ev);
+        } else {
+            sched_yield();
+        }
+    }
+    /* Drain remaining events before exiting. */
+    while (ring_pop(&ev)) {
+        emit_event(&ev);
+        telemetry_update(&ev);
+    }
+    return NULL;
+}
+
 /* ---- Event handlers -----------------------------------------------------
  * One small function per event class. Each receives the immutable
- * es_message_t. msg->process is always the *instigator* (who caused the
- * event); the event-specific union carries the subject (new process, task
- * target, etc.).
+ * es_message_t and pushes a snapshot into the ring buffer, then returns
+ * immediately so the ES callback queue is not held.
  */
 
 /* ES_EVENT_TYPE_NOTIFY_EXEC: a process image was replaced via execve().
@@ -177,47 +450,40 @@ static bool path_is_target(es_string_token_t path) {
 static void handle_exec(const es_message_t *msg) {
     const es_event_exec_t *ev = &msg->event.exec;
 
-    char tbuf[40], pathbuf[1024], signbuf[256];
-    iso_time(msg->time, tbuf, sizeof(tbuf));
-    tok(ev->target->executable->path, pathbuf, sizeof(pathbuf));
-    signing_summary(ev->target, signbuf, sizeof(signbuf));
+    vg_event_t vev = {0};
+    iso_time(msg->time, vev.timestamp, sizeof(vev.timestamp));
+    tok(ev->target->executable->path, vev.path, sizeof(vev.path));
 
-    pid_t pid  = audit_token_to_pid(ev->target->audit_token);
-    pid_t ppid = ev->target->ppid;
+    vev.pid  = audit_token_to_pid(ev->target->audit_token);
+    vev.ppid = ev->target->ppid;
+    vev.signing_flags = ev->target->codesigning_flags;
+    tok(ev->target->team_id,   vev.team_id,   sizeof(vev.team_id));
+    tok(ev->target->signing_id, vev.signing_id, sizeof(vev.signing_id));
 
     /* Inspect the launch environment. es_exec_env_count/es_exec_env walk the
      * envp[] captured at exec time. DYLD_INSERT_LIBRARIES forces dyld to load
      * arbitrary dylibs into the process before main() -- the macOS DLL
      * injection. The DYLD_*_PATH overrides can redirect library resolution
      * to attacker copies; we flag those too, at lower severity. */
-    bool   injected = false;
-    char   inject_detail[1024] = {0};
+    bool     injected = false;
     uint32_t env_count = es_exec_env_count(ev);
     for (uint32_t i = 0; i < env_count; i++) {
         es_string_token_t e = es_exec_env(ev, i);
         if (e.data == NULL) continue;
         if (e.length >= 21 && strncmp(e.data, "DYLD_INSERT_LIBRARIES", 21) == 0) {
             injected = true;
-            tok(e, inject_detail, sizeof(inject_detail));
-            break; /* one is enough to alert */
+            tok(e, vev.inject_var, sizeof(vev.inject_var));
+            break;
         }
         if (!injected && e.length >= 5 && strncmp(e.data, "DYLD_", 5) == 0) {
-            /* DYLD_LIBRARY_PATH / DYLD_FRAMEWORK_PATH / DYLD_FALLBACK_* etc. */
-            tok(e, inject_detail, sizeof(inject_detail));
+            tok(e, vev.inject_var, sizeof(vev.inject_var));
         }
     }
 
-    if (injected) {
-        fprintf(stdout,
-            "[%s] " SEV_ALERT " EXEC+INJECT pid=%d ppid=%d path=%s  signing=[%s]  via=%s\n",
-            tbuf, pid, ppid, pathbuf, signbuf, inject_detail);
-    } else {
-        fprintf(stdout,
-            "[%s] " SEV_INFO  " EXEC        pid=%d ppid=%d path=%s  signing=[%s]%s%s\n",
-            tbuf, pid, ppid, pathbuf, signbuf,
-            inject_detail[0] ? "  dyld-env=" : "",
-            inject_detail[0] ? inject_detail : "");
-    }
+    strncpy(vev.severity,   injected ? SEV_ALERT : SEV_INFO,  sizeof(vev.severity) - 1);
+    strncpy(vev.event_type, injected ? "EXEC+INJECT" : "EXEC", sizeof(vev.event_type) - 1);
+
+    ring_push(&vev);
 }
 
 /* ES_EVENT_TYPE_NOTIFY_FORK: a process duplicated itself. Logged at INFO so
@@ -225,29 +491,36 @@ static void handle_exec(const es_message_t *msg) {
  * how some loaders stage injected children). */
 static void handle_fork(const es_message_t *msg) {
     const es_event_fork_t *ev = &msg->event.fork;
-    char tbuf[40], pathbuf[1024];
-    iso_time(msg->time, tbuf, sizeof(tbuf));
-    tok(ev->child->executable->path, pathbuf, sizeof(pathbuf));
-    /* The parent is the instigator (msg->process); the child is ev->child. */
-    fprintf(stdout, "[%s] " SEV_INFO  " FORK        parent=%d child=%d path=%s\n",
-            tbuf, audit_token_to_pid(msg->process->audit_token),
-            audit_token_to_pid(ev->child->audit_token), pathbuf);
+
+    vg_event_t vev = {0};
+    iso_time(msg->time, vev.timestamp, sizeof(vev.timestamp));
+    tok(ev->child->executable->path, vev.path, sizeof(vev.path));
+    /* Store parent pid in ppid, child pid in pid -- emit_event reads both. */
+    vev.ppid = audit_token_to_pid(msg->process->audit_token);
+    vev.pid  = audit_token_to_pid(ev->child->audit_token);
+    strncpy(vev.severity,   SEV_INFO, sizeof(vev.severity) - 1);
+    strncpy(vev.event_type, "FORK",   sizeof(vev.event_type) - 1);
+
+    ring_push(&vev);
 }
 
 /* ES_EVENT_TYPE_NOTIFY_EXIT: a process terminated. Closes the lifecycle so
  * pids can be aged out of any state table a real product would keep. */
 static void handle_exit(const es_message_t *msg) {
-    char tbuf[40], pathbuf[1024];
-    iso_time(msg->time, tbuf, sizeof(tbuf));
-    tok(msg->process->executable->path, pathbuf, sizeof(pathbuf));
-    fprintf(stdout, "[%s] " SEV_INFO  " EXIT        pid=%d status=%d path=%s\n",
-            tbuf, audit_token_to_pid(msg->process->audit_token),
-            msg->event.exit.stat, pathbuf);
+    vg_event_t vev = {0};
+    iso_time(msg->time, vev.timestamp, sizeof(vev.timestamp));
+    tok(msg->process->executable->path, vev.path, sizeof(vev.path));
+    vev.pid  = audit_token_to_pid(msg->process->audit_token);
+    vev.ppid = (pid_t)msg->event.exit.stat; /* re-use ppid field for exit status */
+    strncpy(vev.severity,   SEV_INFO, sizeof(vev.severity) - 1);
+    strncpy(vev.event_type, "EXIT",   sizeof(vev.event_type) - 1);
+
+    ring_push(&vev);
 }
 
 /* The four task-port events share a shape: an instigator (msg->process)
  * acquiring some flavor of port to a target (es_process_t *target). We
- * funnel them through one printer. `kind` names which port was requested:
+ * funnel them through one builder. `kind` names which port was requested:
  *
  *   GET_TASK         full control port  -> read AND write target memory
  *   GET_TASK_READ    read-only port     -> read target memory
@@ -261,22 +534,22 @@ static void handle_exit(const es_message_t *msg) {
 static void handle_get_task_like(const es_message_t *msg,
                                  const es_process_t *target,
                                  const char *kind) {
-    char tbuf[40], who[1024], tgt[1024], signbuf[256];
-    iso_time(msg->time, tbuf, sizeof(tbuf));
-    tok(msg->process->executable->path, who, sizeof(who));
-    tok(target->executable->path, tgt, sizeof(tgt));
-    signing_summary(msg->process, signbuf, sizeof(signbuf));
+    vg_event_t vev = {0};
+    iso_time(msg->time, vev.timestamp, sizeof(vev.timestamp));
+
+    /* requester info stored in path/ppid; target pid in vev.pid */
+    tok(msg->process->executable->path, vev.path, sizeof(vev.path));
+    vev.ppid = audit_token_to_pid(msg->process->audit_token); /* requester pid */
+    vev.pid  = audit_token_to_pid(target->audit_token);        /* target pid    */
+    vev.signing_flags = msg->process->codesigning_flags;
+    tok(msg->process->team_id,   vev.team_id,   sizeof(vev.team_id));
+    tok(msg->process->signing_id, vev.signing_id, sizeof(vev.signing_id));
 
     bool hits_target = path_is_target(target->executable->path);
-    const char *sev = hits_target ? SEV_ALERT : SEV_WATCH;
+    strncpy(vev.severity,   hits_target ? SEV_ALERT : SEV_WATCH, sizeof(vev.severity) - 1);
+    strncpy(vev.event_type, kind,                                 sizeof(vev.event_type) - 1);
 
-    fprintf(stdout,
-        "[%s] %s %-15s requester=%d(%s) target=%d(%s)  requester-signing=[%s]%s\n",
-        tbuf, sev, kind,
-        audit_token_to_pid(msg->process->audit_token), who,
-        audit_token_to_pid(target->audit_token), tgt,
-        signbuf,
-        hits_target ? "  <== PROTECTED PROCESS" : "");
+    ring_push(&vev);
 
     /* Production hook: subscribe to ES_EVENT_TYPE_AUTH_GET_TASK instead and,
      * when hits_target is true and the requester is not Apple-platform /
@@ -288,7 +561,10 @@ static void handle_get_task_like(const es_message_t *msg,
 
 /* Single entry point ES calls for every delivered message. We switch on the
  * event type and dispatch. Because we only subscribed to NOTIFY events, we
- * never have to call es_respond_*; returning is sufficient. */
+ * never have to call es_respond_*; returning is sufficient.
+ *
+ * All work beyond copying event data into the ring buffer happens on the
+ * consumer thread -- this function returns as fast as possible. */
 static void handle_message(const es_message_t *msg) {
     switch (msg->event_type) {
         case ES_EVENT_TYPE_NOTIFY_EXEC:             handle_exec(msg); break;
@@ -354,6 +630,14 @@ static void shutdown_and_exit(int signo) {
         es_delete_client(g_client);
         g_client = NULL;
     }
+    /* Signal the consumer thread and wait for it to drain. */
+    g_stop_consumer = 1;
+    pthread_join(g_consumer_tid, NULL);
+
+    size_t dropped = atomic_load_explicit(&g_ring.dropped, memory_order_relaxed);
+    if (dropped > 0)
+        fprintf(stdout, "[vanguard] warning: %zu events dropped (ring buffer full)\n", dropped);
+
     fprintf(stdout, "\n[vanguard] stopped.\n");
     fflush(stdout);
     _exit(0);
@@ -375,6 +659,22 @@ int main(int argc, char **argv) {
     else
         fprintf(stdout, "[vanguard] no target specified; logging all task-port access\n");
 
+    /* Initialise the ring buffer atomics (already zero from BSS; explicit for clarity). */
+    atomic_init(&g_ring.head,    0);
+    atomic_init(&g_ring.tail,    0);
+    atomic_init(&g_ring.dropped, 0);
+
+    /* Initialise the running SHA-256 telemetry accumulator. */
+    CC_SHA256_Init(&g_telemetry_ctx);
+    fprintf(stdout, "[vanguard] telemetry hash stream active -> %s\n", TELEMETRY_HASH_PATH);
+
+    /* Start the consumer thread before opening the ES client so no event
+     * can be produced before the consumer is ready. */
+    if (pthread_create(&g_consumer_tid, NULL, consumer_thread, NULL) != 0) {
+        fprintf(stderr, "[vanguard] pthread_create failed: %s\n", strerror(errno));
+        return 1;
+    }
+
     /*
      * STEP 1 -- create the ES client.
      *
@@ -394,6 +694,8 @@ int main(int argc, char **argv) {
 
     if (res != ES_NEW_CLIENT_RESULT_SUCCESS) {
         fprintf(stderr, "[vanguard] es_new_client failed: %s\n", new_client_error(res));
+        g_stop_consumer = 1;
+        pthread_join(g_consumer_tid, NULL);
         return 1;
     }
 
@@ -409,6 +711,8 @@ int main(int argc, char **argv) {
         != ES_RETURN_SUCCESS) {
         fprintf(stderr, "[vanguard] es_subscribe failed\n");
         es_delete_client(g_client);
+        g_stop_consumer = 1;
+        pthread_join(g_consumer_tid, NULL);
         return 1;
     }
 

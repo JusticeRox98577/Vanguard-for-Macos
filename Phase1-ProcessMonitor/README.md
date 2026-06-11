@@ -193,6 +193,42 @@ Phase1-ProcessMonitor/
 └── README.md                         # this file
 ```
 
+## Telemetry hash
+
+Every event processed by the monitor is fed into a running **SHA-256
+accumulator**. After each event the current digest (a snapshot of the
+accumulator — the accumulator itself stays open) is base64-encoded and
+written atomically to:
+
+```
+/tmp/vanguard_telemetry.hash
+```
+
+"Atomically" means the value is written to `/tmp/vanguard_telemetry.hash.tmp`
+first, then `rename(2)` is called — so a reader (Phase 2) can never observe
+a partial write.
+
+The canonical record fed into the hash for each event is:
+
+```
+timestamp|severity|event_type|pid|ppid|path|signing_flags|team_id|signing_id\n
+```
+
+**Purpose — Phase 2 binding.** Phase 2 (Secure Enclave / App Attest) reads
+this file to cryptographically verify that the event stream it received is
+the same stream the monitor produced. Any tampering with, replaying of, or
+gap in the event stream changes the digest, breaking the bind. The file
+contains a single 44-character standard-base64 string (the 32-byte SHA-256
+digest, no line-wrapping) followed by a newline.
+
+A startup log line confirms the hash stream is active:
+
+```
+[vanguard] telemetry hash stream active -> /tmp/vanguard_telemetry.hash
+```
+
+---
+
 ## Limitations (full analysis lands in Phase 3)
 
 - The ES entitlement is gated by Apple; this is a feature (vetting) and a
