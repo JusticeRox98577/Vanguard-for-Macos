@@ -1,0 +1,22 @@
+# Build artifacts
+build/
+*.o
+*.dSYM/
+DerivedData/
+
+# Compiled binaries (sign + build locally; never commit a signed binary)
+Phase1-ProcessMonitor/build/
+vanguard_monitor
+
+# macOS cruft
+.DS_Store
+
+# Editor / IDE
+.vscode/
+.idea/
+*.xcuserstate
+
+# Node (Phase 2 server, later)
+node_modules/
+npm-debug.log*
+.env

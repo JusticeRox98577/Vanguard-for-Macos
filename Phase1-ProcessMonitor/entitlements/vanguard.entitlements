@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    vanguard.entitlements
+    ----------------------------------------------------------------------
+    The single entitlement that makes an Endpoint Security client possible.
+
+    com.apple.developer.endpoint-security.client
+        Authorizes the signed binary to call es_new_client() and receive
+        system-wide security events from the kernel. This is a "restricted"
+        / managed entitlement: on a stock, SIP-enabled Mac, Apple must have
+        granted it to your Developer account and embedded it in a
+        provisioning profile, or the binary must be signed by Apple. For
+        local research on a dedicated test machine you instead disable SIP
+        and AMFI enforcement so a self-signed binary carrying this
+        entitlement is accepted (see README.md "Running locally").
+
+    Note: this entitlement alone is not enough at runtime. The process must
+    ALSO run as root and the user must grant it Full Disk Access in
+    System Settings > Privacy & Security (a TCC permission). Those are
+    runtime gates, not entitlements, so they do not appear in this file.
+-->
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>com.apple.developer.endpoint-security.client</key>
+    <true/>
+</dict>
+</plist>
