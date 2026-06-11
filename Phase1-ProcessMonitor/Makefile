@@ -28,12 +28,15 @@ TARGET ?=
 
 .PHONY: all sign run clean
 
-all: $(BUILD)/$(BIN)
+# `all` always runs `sign`, which depends on the binary. Because `sign` is
+# phony it re-signs on every `make` even when the binary is already built --
+# so a previously-failed sign (e.g. a bad entitlements file) is never left
+# behind as an unsigned binary that `make` then refuses to touch.
+all: sign
 
-# 1) Compile.
-$(BUILD)/$(BIN): $(SRC) | $(BUILD)
+# 1) Compile. Re-runs if the source OR the entitlements change.
+$(BUILD)/$(BIN): $(SRC) $(ENTITLEMENTS) | $(BUILD)
 	$(CC) $(CFLAGS) $(SRC) -o $@ $(LDFLAGS)
-	@$(MAKE) --no-print-directory sign
 
 $(BUILD):
 	@mkdir -p $(BUILD)
@@ -46,6 +49,7 @@ sign: $(BUILD)/$(BIN)
 		--options runtime \
 		$(BUILD)/$(BIN)
 	@echo "signed: $(BUILD)/$(BIN)"
+	@echo "--- entitlements now on the binary: ---"
 	@codesign --display --entitlements - $(BUILD)/$(BIN) 2>/dev/null || true
 
 # 3) Run. ES clients must be root.
