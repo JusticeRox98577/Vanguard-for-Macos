@@ -67,14 +67,32 @@ with the attested key, matching app id, and a strictly-increasing counter.
 ```sh
 cd server
 npm install                       # pulls the one dependency: cbor
+
+# Pin Apple's real trust root (required for /attest; download, don't hand-copy):
+curl -o Apple_App_Attest_Root_CA.pem \
+  https://www.apple.com/certificateauthority/Apple_App_Attest_Root_CA.pem
+
 VANGUARD_TEAM_ID=ABCDE12345 \
 VANGUARD_BUNDLE_ID=com.yourteam.vanguard-attest \
 VANGUARD_ENV=development \
   npm start                       # listens on 127.0.0.1:8787
 ```
 
-`GET /health` works immediately. `/attest` needs the Team/bundle to match the
-client's signing identity.
+`GET /health` and `/challenge` work immediately. `/attest` needs the root CA
+PEM present and the Team/bundle to match the client's signing identity.
+
+**Hardware-free self-test** (no Mac, no Apple account):
+
+```sh
+npm test          # node selftest.js
+```
+
+This exercises `verifyAssertion` with a synthetic P-256 key standing in for
+the Secure Enclave and asserts the security properties hold: a valid assertion
+is accepted and advances the counter, while **replay, tampered clientData, a
+wrong-app rpIdHash, and a foreign-key signature are all rejected**. (The
+*attestation* path can't be self-tested — only a real SEP can mint an
+attestation object — so it's verified on-device per below.)
 
 ### Client (requires a real Apple Developer Team + Apple Silicon/T2 Mac)
 
@@ -112,10 +130,13 @@ Expected output (abridged):
 
 ## Status & honesty notes
 
-- **Server:** complete and syntax-validated (`node --check`); the verification
+- **Server:** complete and tested. `npm test` runs a real-crypto self-test of
+  the assertion verifier (valid accepted; replay/tamper/wrong-app/foreign-key
+  rejected — all passing), and the live endpoints (`/health`, `/challenge`,
+  one-time-challenge enforcement, error paths) are verified. The verification
   logic implements Apple's documented server-side checks with no WebAuthn
-  black-box library, so each step is auditable. Full crypto path exercises
-  once a real attestation object reaches it.
+  black-box library, so each step is auditable. The *attestation* crypto path
+  exercises once a real attestation object reaches it (on-device).
 - **Client:** complete; **builds and runs only on macOS with a real Team
   identity** (DeviceCheck/CryptoKit/Security are macOS frameworks, and App
   Attest requires Apple-issued provisioning). It cannot be compiled or run in

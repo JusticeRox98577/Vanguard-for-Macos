@@ -20,25 +20,41 @@ import cbor from "cbor";
 
 /*
  * Apple App Attest Root CA — the trust anchor every attestation chains to.
- * Source: https://www.apple.com/certificateauthority/  (Apple App Attest Root CA).
- * Pin it here rather than trusting the system store: we want to validate
- * against THIS specific root and nothing else. Operators should verify this
- * PEM against Apple's published certificate before relying on it.
+ *
+ * We deliberately do NOT embed the certificate in source: a transcription
+ * error in a pinned trust root is a silent catastrophe. Instead, download
+ * the official PEM from Apple and place it next to this file:
+ *
+ *   curl -o Apple_App_Attest_Root_CA.pem \
+ *     https://www.apple.com/certificateauthority/Apple_App_Attest_Root_CA.pem
+ *
+ * We pin THIS specific root (not the system store): attestations must chain
+ * to Apple's App Attest CA and nothing else. Loaded lazily so the server
+ * can start (and /challenge, /assert, /health work) without it; /attest
+ * fails with a clear message if it's missing.
  */
-export const APPLE_APP_ATTEST_ROOT_CA = `-----BEGIN CERTIFICATE-----
-MIICITCCAaegAwIBAgIQC/O+DvHN0uD7jG5yH2IXmDAKBggqhkjOPQQDAzBSMSYw
-JAYDVQQDDB1BcHBsZSBBcHAgQXR0ZXN0YXRpb24gUm9vdCBDQTETMBEGA1UECgwK
-QXBwbGUgSW5jLjETMBEGA1UECAwKQ2FsaWZvcm5pYTAeFw0yMDAzMTgxODMyNTNa
-Fw00NTAzMTUwMDAwMDBaMFIxJjAkBgNVBAMMHUFwcGxlIEFwcCBBdHRlc3RhdGlv
-biBSb290IENBMRMwEQYDVQQKDApBcHBsZSBJbmMuMRMwEQYDVQQIDApDYWxpZm9y
-bmlhMHYwEAYHKoZIzj0CAQYFK4EEACIDYgAERTHhmLW07ATaFQIEVwTtT4dyctdh
-NbJhFs/Ii2FdCgAHGbpphY3+d8qjuDngIN3WVhQUBHAoMeQ/cLiP1sOUtgjqK9au
-Yen1mMEvRq9Sk3Jm5X8U62H+xTD3FE9TgS41o0IwQDAPBgNVHRMBAf8EBTADAQH/
-MB0GA1UdDgQWBBSskRBTM72+aEH/pwyp5frq5eWKoTAOBgNVHQ8BAf8EBAMCAQYw
-CgYIKoZIzj0EAwMDaAAwZQIwQgFGnByvsiVbpTKwSga0kP0e8EeDS4+sQmTvb7vn
-53O5+FRXgeLhpJ06ysC5PrOyAjEA3Qal/F1Ofqdz4Tbz+xPYzaA9Ovs8eD/95LU
-oj0OQjOLP6e/vF7yL5oON9pdfQ5G
------END CERTIFICATE-----`;
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const ROOT_CA_PATH = process.env.VANGUARD_ROOT_CA ||
+  join(dirname(fileURLToPath(import.meta.url)), "Apple_App_Attest_Root_CA.pem");
+
+let _rootCa = null;
+export function appleRootCa() {
+  if (_rootCa) return _rootCa;
+  let pem;
+  try {
+    pem = readFileSync(ROOT_CA_PATH, "utf8");
+  } catch {
+    throw new Error(
+      `Apple App Attest Root CA not found at ${ROOT_CA_PATH} — download it: ` +
+      `curl -o "${ROOT_CA_PATH}" https://www.apple.com/certificateauthority/Apple_App_Attest_Root_CA.pem`,
+    );
+  }
+  _rootCa = new crypto.X509Certificate(pem);
+  return _rootCa;
+}
 
 // OID for the Apple-defined certificate extension carrying the nonce.
 const APPLE_NONCE_OID = "1.2.840.113635.100.8.2";
@@ -118,7 +134,7 @@ export function verifyAttestation(attestationB64, challengeB64, expected) {
   // x5c = [ leaf (credCert), intermediate ]. We verify leaf<-intermediate<-root.
   const leaf = new crypto.X509Certificate(x5c[0]);
   const intermediate = new crypto.X509Certificate(x5c[1]);
-  const root = new crypto.X509Certificate(APPLE_APP_ATTEST_ROOT_CA);
+  const root = appleRootCa();
 
   if (!leaf.verify(intermediate.publicKey))
     throw new Error("leaf cert not signed by intermediate");
@@ -135,13 +151,11 @@ export function verifyAttestation(attestationB64, challengeB64, expected) {
 
   // Apple embeds SHA-256(nonce) inside a cert extension (a DER-wrapped
   // OCTET STRING inside a SEQUENCE) on the leaf. Extract and compare.
-  const ext = leaf.raw; // we search the DER for the OID's payload below
   const embeddedNonceHash = extractAppleNonce(leaf);
   if (!embeddedNonceHash)
     throw new Error("apple nonce extension not found on leaf cert");
   if (!crypto.timingSafeEqual(embeddedNonceHash, sha256(expectedNonce)))
     throw new Error("nonce mismatch — attestation not bound to our challenge (replay?)");
-  void ext;
 
   // --- Step 3: keyId must equal SHA-256(leaf public key) -------------------
   // The credId in authData and the caller-supplied keyId must both equal the

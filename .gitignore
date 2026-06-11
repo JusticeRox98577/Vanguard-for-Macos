@@ -16,7 +16,11 @@ vanguard_monitor
 .idea/
 *.xcuserstate
 
-# Node (Phase 2 server, later)
+# Node (Phase 2 server)
 node_modules/
 npm-debug.log*
 .env
+
+# Apple App Attest root CA — downloaded by the operator, never committed
+# (pinning a hand-copied trust root risks silent transcription errors)
+Apple_App_Attest_Root_CA.pem
