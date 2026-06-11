@@ -172,8 +172,16 @@ else
     printf "\n"
     printf "  ${DIM}Running binary with 30-second timeout...${RESET}\n\n"
 
+    # macOS ships without GNU timeout; use gtimeout (Homebrew coreutils) if available,
+    # otherwise run without a timeout limit.
     RUN_EXIT=0
-    RUN_OUT=$(timeout 30 "$ATTEST_BINARY" 2>&1) || RUN_EXIT=$?
+    if command -v timeout &>/dev/null; then
+      RUN_OUT=$(timeout 30 "$ATTEST_BINARY" 2>&1) || RUN_EXIT=$?
+    elif command -v gtimeout &>/dev/null; then
+      RUN_OUT=$(gtimeout 30 "$ATTEST_BINARY" 2>&1) || RUN_EXIT=$?
+    else
+      RUN_OUT=$("$ATTEST_BINARY" 2>&1) || RUN_EXIT=$?
+    fi
 
     while IFS= read -r line; do
       if [[ "$line" == *"✓"* ]] || [[ "$line" == *"ATTESTED"* ]] || [[ "$line" == *"VALID"* ]]; then
@@ -308,7 +316,7 @@ printf "  Write a report to file? ${DIM}(y/N)${RESET} "
 read -r -t 15 WRITE_REPORT || WRITE_REPORT="n"
 printf "\n"
 
-if [[ "${WRITE_REPORT,,}" == "y" ]]; then
+if [[ "$(echo "$WRITE_REPORT" | tr '[:upper:]' '[:lower:]')" == "y" ]]; then
   REPORT_FILE="$REPO/demo-report-$(date +%Y%m%d-%H%M%S).txt"
   {
     printf "Vanguard-for-macOS — Demo Report\n"
