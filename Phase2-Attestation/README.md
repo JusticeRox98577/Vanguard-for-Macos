@@ -137,11 +137,20 @@ Expected output (abridged):
   logic implements Apple's documented server-side checks with no WebAuthn
   black-box library, so each step is auditable. The *attestation* crypto path
   exercises once a real attestation object reaches it (on-device).
-- **Client:** complete; **builds and runs only on macOS with a real Team
-  identity** (DeviceCheck/CryptoKit/Security are macOS frameworks, and App
-  Attest requires Apple-issued provisioning). It cannot be compiled or run in
-  a Linux CI container — that's a property of the platform, not a gap in the
-  code.
+- **Client — Step 1 (SEP key custody): demonstrated.** On a real Apple Silicon
+  Mac with a Team-signed binary, the client generates a non-exportable P-256
+  key in the Secure Enclave, proves export is refused, and verifies an
+  enclave-signed message — all live, confirmed working.
+- **Client — Steps 2+3 (App Attest full chain): gated by Apple, same as
+  Phase 1.** The `com.apple.developer.devicecheck.appattest-environment`
+  entitlement that `DCAppAttestService` requires is not issued for macOS
+  provisioning profiles through the standard developer portal or Xcode
+  automatic signing. Apple gates this entitlement through the same review
+  process as the Endpoint Security entitlement. Once granted, the client code
+  is complete and the server is ready to verify. On iOS the entitlement is
+  issued automatically and the full chain works on-device; the macOS path is
+  the one awaiting Apple's grant. This is consistent with the pitch: **Apple's
+  vetting of both pillars is the trust property, not a workaround.**
 - The pinned **Apple App Attest Root CA** in `verify.js` should be checked
   against Apple's published certificate before any real use.
 - This anchors trust at a point in time; it is **not** a continuous runtime
