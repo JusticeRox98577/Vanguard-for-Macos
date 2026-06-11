@@ -8,8 +8,16 @@ architecture, and operational impact — with the gaps stated plainly.
 | Document | Contents |
 |---|---|
 | **This README** | Executive summary, pitch framing, performance & privacy impact |
+| [PITCH.md](PITCH.md) / [PITCH.html](PITCH.html) | The slide deck for the security team. `PITCH.md` is Marp source (→ PDF/PPTX); `PITCH.html` opens in any browser — **Cmd-P → Save as PDF** for a ready deck |
 | [THREAT-MODEL.md](THREAT-MODEL.md) | Cheat vectors → mitigations → honest residual gaps, per platform |
 | [ARCHITECTURE.md](ARCHITECTURE.md) | Three-pillar framework (corrected), pillar→platform map, data-flow diagram, real-vs-theoretical table |
+
+### Rendering the deck
+
+- **Browser (no tools):** open `PITCH.html`, then Cmd-P → *Save as PDF*.
+- **Marp (best quality):** `npx @marp-team/marp-cli PITCH.md --pdf` (or the
+  "Marp for VS Code" extension). Also does `--pptx` if you want editable slides.
+- `PITCH.html` is generated from `PITCH.md`; edit the Markdown, not the HTML.
 
 ---
 

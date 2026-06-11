@@ -45,6 +45,7 @@ Vanguard-for-Macos/
 │   └── README.md                 #   run both halves, honesty notes
 └── Phase3-Documentation/         # Phase 3 — research submission (drafted)
     ├── README.md                 #   executive summary, pitch, perf & privacy
+    ├── PITCH.md / PITCH.html      #   the slide deck (Marp source + browser-ready)
     ├── THREAT-MODEL.md           #   vectors → mitigations → honest gaps
     └── ARCHITECTURE.md           #   pillars, platform map, data-flow diagram
 ```
