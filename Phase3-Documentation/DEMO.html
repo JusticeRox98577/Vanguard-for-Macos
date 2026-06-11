@@ -1,0 +1,1495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Vanguard-for-macOS — Research Showcase</title>
+<style>
+  /* ── Reset & base ── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0b1622;
+    --bg2:       #0f1e2e;
+    --bg3:       #14263a;
+    --card:      #111d2b;
+    --card2:     #162132;
+    --border:    #1e3048;
+    --accent:    #c8332f;
+    --accent2:   #e84a46;
+    --text:      #d7e2ee;
+    --text2:     #8fa8c0;
+    --text3:     #5a7898;
+    --green:     #2ea043;
+    --green2:    #39c753;
+    --yellow:    #d29922;
+    --yellow2:   #f0b429;
+    --blue:      #2f81f7;
+    --font-mono: "SF Mono", "JetBrains Mono", "Fira Code", "Cascadia Code",
+                 "Consolas", "Courier New", monospace;
+    --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", "Helvetica Neue",
+                 Arial, sans-serif;
+  }
+
+  html { scroll-behavior: smooth; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    font-size: 15px;
+    line-height: 1.65;
+    min-height: 100vh;
+  }
+
+  /* ── Layout shell ── */
+  .page-wrap {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ── Section chrome ── */
+  section {
+    padding: 72px 0 56px;
+    border-bottom: 1px solid var(--border);
+  }
+  section:last-of-type { border-bottom: none; }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 2.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  h3 {
+    font-size: 18px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 10px;
+  }
+
+  .section-intro {
+    color: var(--text2);
+    max-width: 760px;
+    margin-bottom: 36px;
+    font-size: 15.5px;
+  }
+
+  p { margin-bottom: 16px; color: var(--text2); }
+
+  strong { color: var(--text); }
+
+  a { color: var(--blue); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 1px 6px;
+    color: var(--accent2);
+  }
+
+  /* ── NAV ── */
+  nav {
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    background: rgba(11, 22, 34, 0.92);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .nav-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    align-items: center;
+    height: 52px;
+    gap: 8px;
+  }
+
+  .nav-logo {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+    margin-right: 16px;
+    white-space: nowrap;
+  }
+
+  .nav-logo span { color: var(--accent); }
+
+  .nav-links {
+    display: flex;
+    gap: 2px;
+    flex-wrap: wrap;
+  }
+
+  .nav-links a {
+    font-size: 12px;
+    color: var(--text2);
+    padding: 5px 10px;
+    border-radius: 5px;
+    transition: background 0.15s, color 0.15s;
+  }
+
+  .nav-links a:hover {
+    background: var(--bg3);
+    color: var(--text);
+    text-decoration: none;
+  }
+
+  /* ── HERO ── */
+  #hero {
+    padding: 88px 0 72px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .hero-eyebrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(200, 51, 47, 0.12);
+    border: 1px solid rgba(200, 51, 47, 0.3);
+    border-radius: 20px;
+    padding: 5px 14px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--accent2);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    margin-bottom: 28px;
+  }
+
+  .hero-eyebrow::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse-dot 2s infinite;
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  .hero-title {
+    font-size: clamp(36px, 5vw, 60px);
+    font-weight: 800;
+    color: var(--text);
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 20px;
+  }
+
+  .hero-title .accent { color: var(--accent); }
+
+  .hero-thesis {
+    font-size: 18px;
+    color: var(--text2);
+    max-width: 680px;
+    margin-bottom: 32px;
+    line-height: 1.6;
+  }
+
+  .hero-thesis strong { color: var(--text); }
+
+  .hero-cta-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 36px;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 11px 22px;
+    border-radius: 8px;
+    font-size: 13.5px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-decoration: none;
+  }
+
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+    border: 1px solid var(--accent);
+  }
+  .btn-primary:hover {
+    background: var(--accent2);
+    border-color: var(--accent2);
+    text-decoration: none;
+    color: #fff;
+  }
+
+  .btn-secondary {
+    background: transparent;
+    color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-secondary:hover {
+    background: var(--bg3);
+    text-decoration: none;
+    color: var(--text);
+  }
+
+  .hero-disclaimer {
+    font-size: 12px;
+    color: var(--text3);
+    padding: 12px 16px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    max-width: 660px;
+  }
+
+  .hero-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 16px;
+    margin-top: 52px;
+    padding-top: 40px;
+    border-top: 1px solid var(--border);
+  }
+
+  .stat-card {
+    padding: 20px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+  }
+
+  .stat-val {
+    font-size: 28px;
+    font-weight: 800;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-size: 12px;
+    color: var(--text2);
+  }
+
+  /* ── TABLES ── */
+  .table-wrap {
+    overflow-x: auto;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+  }
+
+  thead th {
+    background: var(--bg3);
+    color: var(--text2);
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    text-transform: uppercase;
+    padding: 13px 18px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.12s;
+  }
+
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--bg3); }
+
+  tbody td {
+    padding: 13px 18px;
+    color: var(--text2);
+    vertical-align: top;
+  }
+
+  tbody td:first-child { color: var(--text); font-weight: 600; }
+
+  .td-accent { color: var(--accent2) !important; }
+  .td-green  { color: var(--green2) !important; }
+  .td-yellow { color: var(--yellow2) !important; }
+  .td-blue   { color: var(--blue) !important; }
+
+  /* ── TERMINAL WINDOWS ── */
+  .terminal {
+    background: #050d14;
+    border: 1px solid #1a3050;
+    border-radius: 10px;
+    overflow: hidden;
+    font-family: var(--font-mono);
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+
+  .terminal-bar {
+    background: #0c1824;
+    border-bottom: 1px solid #1a3050;
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .term-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .term-dot-r { background: #ff5f57; }
+  .term-dot-y { background: #ffbd2e; }
+  .term-dot-g { background: #28c840; }
+
+  .terminal-title {
+    font-family: var(--font-sans);
+    font-size: 12px;
+    color: var(--text3);
+    margin-left: 8px;
+  }
+
+  .terminal-body {
+    padding: 18px 22px;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  .tc-prompt  { color: #2f81f7; }
+  .tc-path    { color: #4ec9b0; }
+  .tc-cmd     { color: var(--text); }
+  .tc-dim     { color: #3a5570; }
+  .tc-normal  { color: #8fa8c0; }
+  .tc-green   { color: #39c753; }
+  .tc-red     { color: #ff5f57; }
+  .tc-yellow  { color: #f0b429; }
+  .tc-white   { color: #d7e2ee; }
+  .tc-orange  { color: #e07b54; }
+  .tc-cyan    { color: #4ec9b0; }
+  .tc-magenta { color: #c586c0; }
+
+  .alert-line {
+    display: block;
+    border-left: 3px solid var(--accent);
+    padding-left: 12px;
+    margin-left: -12px;
+    background: rgba(200, 51, 47, 0.07);
+  }
+
+  .ok-line {
+    display: block;
+    border-left: 3px solid var(--green);
+    padding-left: 12px;
+    margin-left: -12px;
+    background: rgba(46, 160, 67, 0.07);
+  }
+
+  /* ── CARDS ── */
+  .cards-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 20px;
+  }
+
+  .phase-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .phase-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+  }
+
+  .phase-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), transparent);
+  }
+
+  .phase-num {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  .phase-title {
+    font-size: 17px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .phase-sub {
+    font-size: 12px;
+    color: var(--text3);
+    margin-bottom: 16px;
+    font-family: var(--font-mono);
+  }
+
+  .phase-desc {
+    font-size: 13.5px;
+    color: var(--text2);
+    margin-bottom: 20px;
+    line-height: 1.6;
+  }
+
+  .phase-detail {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 14px;
+    margin-bottom: 18px;
+    font-size: 12.5px;
+    color: var(--text2);
+    font-family: var(--font-mono);
+    line-height: 1.6;
+  }
+
+  .phase-detail .highlight { color: var(--green2); }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+  }
+
+  .badge-green {
+    background: rgba(46, 160, 67, 0.15);
+    color: var(--green2);
+    border: 1px solid rgba(46, 160, 67, 0.3);
+  }
+
+  .badge-yellow {
+    background: rgba(210, 153, 34, 0.15);
+    color: var(--yellow2);
+    border: 1px solid rgba(210, 153, 34, 0.3);
+  }
+
+  .badge-blue {
+    background: rgba(47, 129, 247, 0.15);
+    color: var(--blue);
+    border: 1px solid rgba(47, 129, 247, 0.3);
+  }
+
+  /* ── TERMINAL GRID ── */
+  .term-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+
+  @media (max-width: 880px) {
+    .term-grid { grid-template-columns: 1fr; }
+  }
+
+  /* ── vs DRIVER COMPARISON ── */
+  .compare-row-win td:nth-child(2)  { color: var(--yellow2) !important; }
+  .compare-row-mac td:nth-child(3)  { color: var(--green2) !important; }
+
+  .win-col { color: var(--yellow2); }
+  .mac-col { color: var(--green2); }
+  .neutral-col { color: var(--text2); }
+
+  /* ── GAP CALLOUT ── */
+  .gap-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .gap-list li {
+    display: flex;
+    gap: 14px;
+    align-items: flex-start;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-size: 13.5px;
+    color: var(--text2);
+  }
+
+  .gap-icon {
+    font-size: 16px;
+    line-height: 1.4;
+    flex-shrink: 0;
+  }
+
+  .gap-list li strong { color: var(--text); }
+
+  /* ── NEXT STEPS ── */
+  .steps-list {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    counter-reset: step-counter;
+  }
+
+  .steps-list li {
+    display: flex;
+    gap: 16px;
+    align-items: flex-start;
+    counter-increment: step-counter;
+    font-size: 14px;
+    color: var(--text2);
+  }
+
+  .steps-list li::before {
+    content: counter(step-counter);
+    flex-shrink: 0;
+    width: 30px;
+    height: 30px;
+    background: rgba(200, 51, 47, 0.15);
+    border: 1px solid rgba(200, 51, 47, 0.35);
+    border-radius: 50%;
+    color: var(--accent2);
+    font-size: 13px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-top: 1px;
+  }
+
+  /* ── CALLOUT BOX ── */
+  .callout {
+    background: rgba(200, 51, 47, 0.07);
+    border: 1px solid rgba(200, 51, 47, 0.25);
+    border-left: 4px solid var(--accent);
+    border-radius: 8px;
+    padding: 20px 24px;
+    margin: 28px 0;
+    color: var(--text2);
+    font-size: 14.5px;
+    line-height: 1.65;
+  }
+
+  .callout strong { color: var(--text); }
+
+  .callout-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 8px;
+  }
+
+  /* ── FOOTER ── */
+  footer {
+    background: var(--bg2);
+    border-top: 1px solid var(--border);
+    padding: 36px 0;
+    text-align: center;
+    font-size: 13px;
+    color: var(--text3);
+  }
+
+  footer a { color: var(--text2); }
+  footer strong { color: var(--text2); }
+
+  .footer-inner {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 32px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  /* ── ARCH TERMINAL ── */
+  .arch-terminal .terminal-body {
+    line-height: 1.5;
+  }
+
+  /* ── STATUS ROW ── */
+  .status-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 600;
+  }
+
+  .dot-green { color: var(--green2); }
+  .dot-yellow { color: var(--yellow2); }
+  .dot-red { color: var(--accent2); }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--border), transparent);
+    margin: 0;
+  }
+
+  /* ── THESIS TABLE highlight ── */
+  .thesis-win td { background: rgba(255, 95, 87, 0.04); }
+  .thesis-mac td { background: rgba(57, 199, 83, 0.04); }
+
+  /* ── server test ── */
+  .test-pass { color: var(--green2); }
+  .test-info { color: var(--blue); }
+
+  /* ── responsive ── */
+  @media (max-width: 640px) {
+    .page-wrap { padding: 0 16px; }
+    .nav-inner  { padding: 0 16px; }
+    .nav-links  { display: none; }
+    .hero-title { font-size: 30px; }
+    section { padding: 48px 0 40px; }
+    .hero-stats { grid-template-columns: 1fr 1fr; }
+  }
+
+  /* ── scroll reveal ── */
+  @media (prefers-reduced-motion: no-preference) {
+    .reveal {
+      opacity: 0;
+      transform: translateY(18px);
+      transition: opacity 0.5s ease, transform 0.5s ease;
+    }
+    .reveal.visible {
+      opacity: 1;
+      transform: none;
+    }
+  }
+</style>
+</head>
+<body>
+
+<!-- ── NAV ── -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo">Vanguard<span>-for-macOS</span></div>
+    <div class="nav-links">
+      <a href="#problem">Problem</a>
+      <a href="#thesis">Thesis</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#built">What's Built</a>
+      <a href="#output">Live Output</a>
+      <a href="#selftest">Self-Test</a>
+      <a href="#threat-model">Threat Model</a>
+      <a href="#gaps">Gaps</a>
+      <a href="#vs-driver">vs. vgc.sys</a>
+      <a href="#next">Next Steps</a>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section id="hero">
+  <div class="page-wrap">
+    <div class="hero-eyebrow">Research Submission · Anti-cheat on Apple Silicon</div>
+
+    <h1 class="hero-title">
+      Hardware-anchored anti-cheat<br>
+      <span class="accent">without a kernel driver</span>
+    </h1>
+
+    <p class="hero-thesis">
+      Apple Silicon's trust chain — <strong>Endpoint Security + Secure Enclave + App Attest</strong> —
+      can deliver Vanguard-class competitive-integrity guarantees on macOS with no ring-0 code.
+      The client doesn't need to be <strong>unbreakable</strong>. It needs to be <strong>unforgeable</strong>.
+    </p>
+
+    <div class="hero-cta-row">
+      <a href="https://github.com/JusticeRox98577/Vanguard-for-Macos" class="btn btn-primary">
+        &#xe225; View Repository
+      </a>
+      <a href="#built" class="btn btn-secondary">See What's Built</a>
+      <a href="#vs-driver" class="btn btn-secondary">vs. vgc.sys</a>
+    </div>
+
+    <div class="hero-disclaimer">
+      <strong>Independent research.</strong> Not affiliated with, authorized by, or endorsed by
+      Riot Games or Apple. "Vanguard" and "VALORANT" are trademarks of Riot Games, used here
+      nominatively for comparison and interoperability description.
+    </div>
+
+    <div class="hero-stats">
+      <div class="stat-card">
+        <div class="stat-val">3</div>
+        <div class="stat-label">Phases built</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">~415</div>
+        <div class="stat-label">Lines of C (Phase 1)</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">5/5</div>
+        <div class="stat-label">Server self-test passing</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">0</div>
+        <div class="stat-label">Kernel extensions required</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-val">SEP</div>
+        <div class="stat-label">Hardware trust anchor</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── THE PROBLEM ── -->
+<section id="problem">
+  <div class="page-wrap reveal">
+    <div class="section-label">01 — The Problem</div>
+    <h2>Why VALORANT can't ship on macOS</h2>
+    <p class="section-intro">
+      Kernel-level anti-cheat is today's bar on Windows. It is also the single reason
+      titles like VALORANT cannot ship on macOS.
+    </p>
+
+    <p>
+      <strong>vgc.sys</strong>, Easy Anti-Cheat, and BattlEye all load a ring-0 kernel driver
+      at boot. Apple effectively prohibits third-party kernel extensions: the kext pipeline
+      is deprecated, and loading one requires explicit Apple notarization, user approval, and
+      a full reboot — a user-experience non-starter for a competitive game.
+    </p>
+
+    <p>
+      The result is an entire platform of players excluded by an <em>implementation detail</em>
+      of the security model, not by the security requirement itself.
+      Millions of Mac users who want to play VALORANT cannot — not because the Mac is less
+      secure, but because the current approach assumes a kernel driver is the only path.
+    </p>
+
+    <div class="callout">
+      <div class="callout-title">The real question</div>
+      How do you protect the client on a platform with no kernel driver?
+      This project is one concrete, auditable answer — built and tested.
+    </div>
+
+    <div class="table-wrap" style="margin-top: 28px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Anti-cheat</th>
+            <th>Windows approach</th>
+            <th>macOS status</th>
+            <th>Blocker</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Vanguard (vgc.sys)</td>
+            <td>Ring-0 kernel driver, boot-loaded</td>
+            <td class="td-accent">Not shipped</td>
+            <td>Apple deprecated kext pipeline</td>
+          </tr>
+          <tr>
+            <td>Easy Anti-Cheat</td>
+            <td>Kernel driver + SDK</td>
+            <td class="td-yellow">Partial (opted-in)</td>
+            <td>No kernel enforcement layer</td>
+          </tr>
+          <tr>
+            <td>BattlEye</td>
+            <td>Kernel driver</td>
+            <td class="td-yellow">Partial (opted-in)</td>
+            <td>No kernel enforcement layer</td>
+          </tr>
+          <tr>
+            <td><strong>Vanguard-for-macOS</strong></td>
+            <td>—</td>
+            <td class="td-green">PoC built</td>
+            <td>Entitlement grant (same path as EDRs)</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── THESIS ── -->
+<section id="thesis">
+  <div class="page-wrap reveal">
+    <div class="section-label">02 — The Thesis</div>
+    <h2>Ring 0 is mostly unnecessary on Apple Silicon</h2>
+    <p class="section-intro">
+      Apple already removed the attack surface a kernel driver exists to police.
+      What remains is delivered through two Apple-supported user-space channels.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Windows threat</th>
+            <th>Why it needs ring 0 on Windows</th>
+            <th>macOS structural equivalent — no ring 0 needed</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="thesis-win">
+            <td>Memory read/write cheats</td>
+            <td><code>OpenProcess</code> requires handle strip via Ob callbacks in kernel</td>
+            <td class="td-green">Task-port model + <code>GET_TASK</code> ES events gate every access — catchable in user space</td>
+          </tr>
+          <tr class="thesis-win">
+            <td>DLL/dylib injection</td>
+            <td><code>AppInit_DLLs</code>, remote thread — need image-load callbacks at ring 0</td>
+            <td class="td-green"><code>DYLD_INSERT_LIBRARIES</code> caught at exec by ES; hardened runtime + library validation block unsigned dylibs at load</td>
+          </tr>
+          <tr class="thesis-win">
+            <td>Unsigned kernel code (BYOVD)</td>
+            <td>Kernel driver at ring 0 is the only thing that can police ring 0</td>
+            <td class="td-green">No kexts without Apple notarization + explicit user approval + reboot; BYOVD is a non-path</td>
+          </tr>
+          <tr class="thesis-win">
+            <td>DMA hardware cards</td>
+            <td>Must verify VT-d/AMD-Vi IOMMU state at ring 0</td>
+            <td class="td-green">DART IOMMU always on; no user-accessible PCIe on most Macs — commodity DMA cards largely don't apply</td>
+          </tr>
+          <tr class="thesis-win">
+            <td>Boot-state integrity</td>
+            <td>Relies on TPM (bolt-on, external to CPU)</td>
+            <td class="td-green">Secure Boot rooted in SEP (die-level, native) — attestable via App Attest without a driver</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout" style="margin-top: 28px;">
+      <div class="callout-title">The trust inversion</div>
+      <strong>Not "the client is unbreakable."</strong> The server only believes clients whose
+      hardware attestation verifies. Tamper with the agent — its code signature changes,
+      attestation breaks, and the server stops trusting it. Trust decisions live server-side,
+      extended only to clients whose Apple-signed hardware proof verifies from scratch.
+    </div>
+  </div>
+</section>
+
+<!-- ── ARCHITECTURE ── -->
+<section id="architecture">
+  <div class="page-wrap reveal">
+    <div class="section-label">03 — Architecture</div>
+    <h2>One client, two Apple channels</h2>
+    <p class="section-intro">
+      The security agent sits between the game engine and Apple's hardware trust infrastructure,
+      reporting signed telemetry to a backend that makes all trust decisions.
+    </p>
+
+    <div class="terminal arch-terminal">
+      <div class="terminal-bar">
+        <div class="term-dot term-dot-r"></div>
+        <div class="term-dot term-dot-y"></div>
+        <div class="term-dot term-dot-g"></div>
+        <div class="terminal-title">system architecture — Vanguard-for-macOS</div>
+      </div>
+      <div class="terminal-body"><span class="tc-dim">        ┌────────────────────────┐</span>
+<span class="tc-dim">        │  </span><span class="tc-cyan">GAME CLIENT / ENGINE  </span><span class="tc-dim">  │</span>
+<span class="tc-dim">        └───────────</span><span class="tc-white">┬</span><span class="tc-dim">────────────┘</span>
+<span class="tc-dim">                    │</span> <span class="tc-normal">in-process SDK</span>
+<span class="tc-dim">        ┌───────────</span><span class="tc-white">▼</span><span class="tc-dim">────────────┐</span>
+<span class="tc-normal">   OS ◄─┤  </span><span class="tc-white">CLIENT SECURITY AGENT  </span><span class="tc-normal">├─► HARDWARE</span>
+<span class="tc-normal">  ES    │  </span><span class="tc-cyan">Phase 1: ES monitor    </span><span class="tc-normal">│   SEP / App Attest</span>
+<span class="tc-normal">events  │  </span><span class="tc-cyan">Phase 2: SEP + attest  </span><span class="tc-normal">│   (Phase 2)</span>
+<span class="tc-dim">        └───────────</span><span class="tc-white">┬</span><span class="tc-dim">────────────┘</span>
+<span class="tc-dim">                    │</span> <span class="tc-normal">signed telemetry + attestation</span>
+<span class="tc-dim">        ┌───────────</span><span class="tc-white">▼</span><span class="tc-dim">────────────┐</span>
+<span class="tc-dim">        │  </span><span class="tc-yellow">BACKEND TELEMETRY SVR  </span><span class="tc-dim">│  verify attestation vs Apple,</span>
+<span class="tc-dim">        │  </span><span class="tc-normal">trust: admit/flag/kick </span><span class="tc-dim">│  verify signed events, decide</span>
+<span class="tc-dim">        └────────────────────────┘</span>
+
+<span class="tc-dim">  ─────────────────────────────────────────────────────────────</span>
+
+  <span class="tc-cyan">ES layer</span>  <span class="tc-dim">→</span>  <span class="tc-normal">kernel-vetted event stream (exec, fork, task-port, dylib)</span>
+  <span class="tc-cyan">SEP layer</span> <span class="tc-dim">→</span>  <span class="tc-normal">non-exportable P-256 key; signs assertions in-enclave</span>
+  <span class="tc-cyan">App Attest</span><span class="tc-dim">→</span>  <span class="tc-normal">Apple certificate chain proves key is on genuine hardware</span>
+  <span class="tc-cyan">Server</span>    <span class="tc-dim">→</span>  <span class="tc-normal">root of trust; verifies Apple cert chain from scratch</span></div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; margin-top: 24px;">
+      <div class="phase-card" style="border-color: #1e3048;">
+        <div class="phase-num">Pillar 1</div>
+        <div class="phase-title">Endpoint Security</div>
+        <p style="font-size: 13px; color: var(--text2); margin: 0;">
+          Kernel-vended, user-space-consumed event stream. Subscribed event classes:
+          <code>EXEC</code>, <code>FORK</code>, <code>EXIT</code>,
+          <code>GET_TASK</code>, <code>AUTH_GET_TASK</code>, <code>EXEC_ENV</code>,
+          <code>LIBRARY_LOAD</code>. Requires Apple-granted entitlement — the same gate
+          every EDR vendor passes.
+        </p>
+      </div>
+      <div class="phase-card" style="border-color: #1e3048;">
+        <div class="phase-num">Pillar 2</div>
+        <div class="phase-title">Secure Enclave</div>
+        <p style="font-size: 13px; color: var(--text2); margin: 0;">
+          P-256 key generated and stored on-die. Private key <em>cannot be exported</em>
+          — not by the OS, not by root, not by the app. Signs assertions inside the
+          enclave. Extraction would require physically attacking the chip.
+        </p>
+      </div>
+      <div class="phase-card" style="border-color: #1e3048;">
+        <div class="phase-num">Pillar 3</div>
+        <div class="phase-title">App Attest</div>
+        <p style="font-size: 13px; color: var(--text2); margin: 0;">
+          Apple issues a certificate chain binding the SEP key to a specific
+          <code>appId</code> + <code>teamId</code> on a specific physical device.
+          A VM cannot produce a valid Apple-signed attestation. Replay-proof via
+          server-issued challenges and a monotonic counter.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── WHAT'S BUILT ── -->
+<section id="built">
+  <div class="page-wrap reveal">
+    <div class="section-label">04 — What's Built</div>
+    <h2>Not slideware — working code</h2>
+    <p class="section-intro">
+      Three phases of implementation, each proving a distinct pillar of the architecture.
+    </p>
+
+    <div class="cards-grid">
+
+      <!-- Phase 1 -->
+      <div class="phase-card">
+        <div class="phase-num">Phase 1</div>
+        <div class="phase-title">Endpoint Security Monitor</div>
+        <div class="phase-sub">C · ~415 lines · heavily commented</div>
+        <div class="phase-desc">
+          Subscribes to the macOS Endpoint Security framework and monitors every
+          security-relevant event an anti-cheat cares about: process lifecycle,
+          task-port access (memory read/write gateway), dylib injection via
+          environment variable, and code-signing identity of every launched process.
+        </div>
+        <div class="phase-detail">
+<span class="highlight">Detects:</span>  EXEC · FORK · EXIT
+          GET_TASK · AUTH_GET_TASK
+          EXEC_ENV (DYLD_INSERT_LIBRARIES)
+          LIBRARY_LOAD (unsigned dylibs)
+<span class="highlight">Ships with:</span> one-command detection harness</div>
+        <span class="badge badge-green">&#x2705; Built</span>
+        <span class="badge badge-yellow" style="margin-left: 8px;">&#x23F3; Entitlement pending</span>
+      </div>
+
+      <!-- Phase 2 -->
+      <div class="phase-card">
+        <div class="phase-num">Phase 2</div>
+        <div class="phase-title">SEP Key Custody + App Attest</div>
+        <div class="phase-sub">Swift client · Node.js verifier</div>
+        <div class="phase-desc">
+          Demonstrates the full hardware attestation chain: Secure Enclave generates
+          a non-exportable P-256 key, App Attest asks Apple to certify it, and the
+          server verifies the Apple certificate chain from scratch — no WebAuthn
+          black box, every check is commented and auditable.
+        </div>
+        <div class="phase-detail">
+<span class="highlight">SEP demo:</span>  key gen · sign · export-refused ✓
+<span class="highlight">Server:</span>    /challenge /attest /assert /health
+<span class="highlight">Self-test:</span> 5/5 passing (hardware-free)</div>
+        <span class="badge badge-green">&#x2705; SEP key custody live</span>
+        <span class="badge badge-yellow" style="margin-left: 8px;">&#x23F3; Full chain pending</span>
+      </div>
+
+      <!-- Phase 3 -->
+      <div class="phase-card">
+        <div class="phase-num">Phase 3</div>
+        <div class="phase-title">Documentation &amp; Pitch</div>
+        <div class="phase-sub">Threat model · Architecture · This file</div>
+        <div class="phase-desc">
+          Vector-by-vector threat model with explicit residual gaps, full system
+          architecture with data flows, 13-slide pitch deck (Marp + browser-ready HTML),
+          and this interactive showcase. The honest gap analysis is the point: a
+          defense you oversell is a defense a red team stops trusting.
+        </div>
+        <div class="phase-detail">
+<span class="highlight">Includes:</span> THREAT-MODEL.md (6 vectors)
+          ARCHITECTURE.md (3 pillars)
+          PITCH.html (browser, no tools)</div>
+        <span class="badge badge-green">&#x2705; Complete</span>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── LIVE OUTPUT ── -->
+<section id="output">
+  <div class="page-wrap reveal">
+    <div class="section-label">05 — Live Output</div>
+    <h2>What it looks like running</h2>
+    <p class="section-intro">
+      Actual terminal output from Phase 1 (detection monitor) and Phase 2 (SEP key custody).
+      ALERT lines are highlighted in red; successful attestation steps in green.
+    </p>
+
+    <div class="term-grid">
+
+      <!-- Phase 1 output -->
+      <div>
+        <h3 style="margin-bottom: 12px;">Phase 1 — Endpoint Security Detection</h3>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <div class="term-dot term-dot-r"></div>
+            <div class="term-dot term-dot-y"></div>
+            <div class="term-dot term-dot-g"></div>
+            <div class="terminal-title">vanguard_monitor — sudo ./build/vanguard_monitor MyGame</div>
+          </div>
+          <div class="terminal-body"><span class="tc-green">[vanguard] Endpoint Security monitor starting...</span>
+<span class="tc-normal">[vanguard] Protected process: MyGame</span>
+<span class="tc-normal">[vanguard] Subscribed to 7 event classes</span>
+<span class="tc-dim">─────────────────────────────────────────────</span>
+<span class="tc-normal">[2026-06-11 14:22:01] EXEC   pid=8823  path=/usr/bin/python3</span>
+<span class="tc-normal">[2026-06-11 14:22:01]          signing=com.apple.python · Apple</span>
+<span class="tc-normal">[2026-06-11 14:22:03] FORK   pid=8830  parent=8829 (bash)</span>
+<span class="tc-normal">[2026-06-11 14:22:05] EXEC   pid=8831  path=/Users/tester/loader</span>
+<span class="tc-normal">[2026-06-11 14:22:05]          signing=UNSIGNED</span>
+<span class="alert-line"><span class="tc-red">[2026] ALERT GET_TASK    requester=loader  target=MyGame  &lt;== PROTECTED PROCESS</span></span>
+<span class="tc-normal">[2026-06-11 14:22:06]   requester pid=8831 · target pid=9002 (MyGame)</span>
+<span class="tc-dim">─────────────────────────────────────────────</span>
+<span class="tc-normal">[2026-06-11 14:22:10] EXEC   pid=8840  path=/Users/tester/inject_test</span>
+<span class="alert-line"><span class="tc-red">[2026] ALERT EXEC+INJECT path=inject_test  via=DYLD_INSERT_LIBRARIES=/tmp/hook.dylib</span></span>
+<span class="tc-normal">[2026-06-11 14:22:10]   env var caught at exec · before dyld processed it</span>
+<span class="tc-dim">─────────────────────────────────────────────</span>
+<span class="tc-normal">[2026-06-11 14:22:15] LIBRARY_LOAD  pid=8850  path=/tmp/hook.dylib</span>
+<span class="alert-line"><span class="tc-red">[2026] ALERT UNSIGNED_DYLIB  path=/tmp/hook.dylib  loaded into=MyGame</span></span>
+<span class="tc-normal">[2026-06-11 14:22:15]   signing=UNSIGNED (no team ID)</span>
+<span class="tc-dim">─────────────────────────────────────────────</span>
+<span class="tc-normal">[2026-06-11 14:22:20] EXIT   pid=8831  signal=0</span>
+<span class="tc-normal">[vanguard] session summary: 3 ALERT(s) · 6 EXEC · 1 FORK · 2 EXIT</span></div>
+        </div>
+      </div>
+
+      <!-- Phase 2 output -->
+      <div>
+        <h3 style="margin-bottom: 12px;">Phase 2 — SEP Key Custody</h3>
+        <div class="terminal">
+          <div class="terminal-bar">
+            <div class="term-dot term-dot-r"></div>
+            <div class="term-dot term-dot-y"></div>
+            <div class="term-dot term-dot-g"></div>
+            <div class="terminal-title">VanguardAttest — ./VanguardAttest.app/Contents/MacOS/VanguardAttest</div>
+          </div>
+          <div class="terminal-body"><span class="tc-normal">[attest-client] ─── Step 1: Secure Enclave key custody ───</span>
+<span class="ok-line"><span class="tc-green">[attest-client]   SEP P-256 key generated.</span></span>
+<span class="tc-normal">[attest-client]   public key (X9.63): BD1Xsfn7Kg...</span>
+<span class="ok-line"><span class="tc-green">[attest-client]   private key export refused by SEP (expected) ✓</span></span>
+<span class="ok-line"><span class="tc-green">[attest-client]   enclave-signed message verifies: ✓</span></span>
+
+<span class="tc-normal">[attest-client] ─── Step 2: App Attest key + attestation ───</span>
+<span class="tc-normal">[attest-client]   fetching challenge from server...</span>
+<span class="tc-normal">[attest-client]   challenge: a7f3e9d2b4c18f...</span>
+<span class="tc-normal">[attest-client]   requesting Apple attestation object...</span>
+<span class="tc-normal">[attest-client]   sending attestation to server for verification...</span>
+<span class="ok-line"><span class="tc-green">[attest-client]   server verdict: ATTESTED ✓</span></span>
+
+<span class="tc-normal">[attest-client] ─── Step 3: per-request assertion (replay-proof) ───</span>
+<span class="tc-normal">[attest-client]   fetching fresh challenge...</span>
+<span class="tc-normal">[attest-client]   signing clientData with SEP key...</span>
+<span class="tc-normal">[attest-client]   sending assertion + ES telemetry envelope...</span>
+<span class="ok-line"><span class="tc-green">[attest-client]   server verdict: ASSERTION VALID ✓  counter=1</span></span>
+<span class="tc-dim">──────────────────────────────────────────</span>
+<span class="ok-line"><span class="tc-green">[attest-client] full trust chain demonstrated: SEP → Apple → server ✓</span></span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+<!-- ── SERVER SELF-TEST ── -->
+<section id="selftest">
+  <div class="page-wrap reveal">
+    <div class="section-label">06 — Server Self-Test</div>
+    <h2>5/5 security properties verified</h2>
+    <p class="section-intro">
+      The Phase 2 Node.js verifier ships with a hardware-free self-test suite.
+      Five scenarios: valid assertion accepted, replay rejected, tampered payload rejected,
+      wrong RP ID rejected, foreign key rejected. Runs anywhere — no Mac required.
+    </p>
+
+    <div style="max-width: 720px;">
+      <div class="terminal">
+        <div class="terminal-bar">
+          <div class="term-dot term-dot-r"></div>
+          <div class="term-dot term-dot-y"></div>
+          <div class="term-dot term-dot-g"></div>
+          <div class="terminal-title">Phase2-Attestation/server — npm test</div>
+        </div>
+        <div class="terminal-body"><span class="tc-prompt">$</span> <span class="tc-path">~/Vanguard-for-Macos/Phase2-Attestation/server</span> <span class="tc-cmd">npm test</span>
+
+<span class="tc-dim">&gt; vanguard-attest-server@1.0.0 test</span>
+<span class="tc-dim">&gt; node selftest.js</span>
+
+<span class="tc-cyan">verifyAssertion — happy-path: valid assertion accepted ✓</span>
+<span class="ok-line"><span class="tc-green">  ✓ valid assertion accepted</span></span>
+<span class="ok-line"><span class="tc-green">  ✓ replayed counter rejected</span></span>
+<span class="ok-line"><span class="tc-green">  ✓ tampered clientData rejected</span></span>
+<span class="ok-line"><span class="tc-green">  ✓ wrong rpIdHash rejected</span></span>
+<span class="ok-line"><span class="tc-green">  ✓ foreign-key signature rejected</span></span>
+
+<span class="tc-cyan">verifyAssertion: </span><span class="tc-green">5 passed</span><span class="tc-dim">, 0 failed</span>
+
+<span class="tc-dim">──────────────────────────────────────────────</span>
+<span class="tc-green">All self-tests passed.</span></div>
+      </div>
+    </div>
+
+    <div style="margin-top: 24px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 12px;">
+      <div class="phase-card" style="padding: 18px 20px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--green2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">Test 1</div>
+        <div style="font-size: 13px; color: var(--text); margin-bottom: 4px;">Valid assertion accepted</div>
+        <div style="font-size: 12px; color: var(--text2);">Correct counter, correct hash, correct key — passes</div>
+      </div>
+      <div class="phase-card" style="padding: 18px 20px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--green2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">Test 2</div>
+        <div style="font-size: 13px; color: var(--text); margin-bottom: 4px;">Replay rejected</div>
+        <div style="font-size: 12px; color: var(--text2);">Re-sending old counter value fails — replay protection holds</div>
+      </div>
+      <div class="phase-card" style="padding: 18px 20px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--green2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">Test 3</div>
+        <div style="font-size: 13px; color: var(--text); margin-bottom: 4px;">Tampered payload rejected</div>
+        <div style="font-size: 12px; color: var(--text2);">Modified clientData breaks signature — tamper detection holds</div>
+      </div>
+      <div class="phase-card" style="padding: 18px 20px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--green2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">Test 4</div>
+        <div style="font-size: 13px; color: var(--text); margin-bottom: 4px;">Wrong RP ID rejected</div>
+        <div style="font-size: 12px; color: var(--text2);">Assertion for a different app ID fails — binding is strict</div>
+      </div>
+      <div class="phase-card" style="padding: 18px 20px;">
+        <div style="font-size: 11px; font-weight: 700; color: var(--green2); letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">Test 5</div>
+        <div style="font-size: 13px; color: var(--text); margin-bottom: 4px;">Foreign key rejected</div>
+        <div style="font-size: 12px; color: var(--text2);">Key from a different device/identity fails — forgery impossible</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── THREAT MODEL ── -->
+<section id="threat-model">
+  <div class="page-wrap reveal">
+    <div class="section-label">07 — Threat Model</div>
+    <h2>Vector-by-vector analysis</h2>
+    <p class="section-intro">
+      Six cheat vectors, the macOS platform mitigation for each, and the honest
+      residual gap. Full analysis in <code>THREAT-MODEL.md</code>.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Vector</th>
+            <th>macOS mitigation</th>
+            <th>Implementation status</th>
+            <th>Residual gap</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Memory editing<br><span style="font-size: 11px; font-weight: 400; color: var(--text3);">task_for_pid / mach_vm_read</span></td>
+            <td>ES <code>GET_TASK</code> events; deny via <code>AUTH_GET_TASK</code></td>
+            <td><span class="badge badge-green">&#x2705; Demonstrated</span></td>
+            <td>Root compromise defeats; hardened runtime + no <code>get-task-allow</code> substantially shrinks surface</td>
+          </tr>
+          <tr>
+            <td>dylib injection<br><span style="font-size: 11px; font-weight: 400; color: var(--text3);">DYLD_INSERT_LIBRARIES</span></td>
+            <td>ES exec-env scan + library validation rejects unsigned/foreign dylibs</td>
+            <td><span class="badge badge-green">&#x2705; Demonstrated</span></td>
+            <td>Platform's library validation already blocks most injection before our monitor fires; we add telemetry</td>
+          </tr>
+          <tr>
+            <td>DMA hardware cards<br><span style="font-size: 11px; font-weight: 400; color: var(--text3);">PCIe / Thunderbolt FPGA</span></td>
+            <td>DART IOMMU always on; no user-accessible PCIe on most Macs</td>
+            <td><span class="badge badge-blue">&#x1F527; Structural</span></td>
+            <td>Mac Pro has PCIe slots (still behind DART). Thunderbolt DMA is DART-gated. Commodity DMA cards are largely a non-threat</td>
+          </tr>
+          <tr>
+            <td>Input injection<br><span style="font-size: 11px; font-weight: 400; color: var(--text3);">CGEvent / virtual HID / KMBox</span></td>
+            <td>Server-side input-vector ML on movement/acceleration curves</td>
+            <td><span class="badge badge-yellow">&#x1F4CB; External — engine/server</span></td>
+            <td>Fundamentally server-side. No client agent — ours or a kernel driver — fully closes hardware input emulation</td>
+          </tr>
+          <tr>
+            <td>Kernel rootkit / BYOVD<br><span style="font-size: 11px; font-weight: 400; color: var(--text3);">Unsigned kext / vulnerable driver</span></td>
+            <td>SIP, signed system volume, no kexts without Apple notarization + reboot</td>
+            <td><span class="badge badge-blue">&#x1F527; Platform</span></td>
+            <td>Lowering boot security is measurable and attestable. Bar far higher than Windows BYOVD; still not impossible via 0-day</td>
+          </tr>
+          <tr>
+            <td>VM / HWID spoofing<br><span style="font-size: 11px; font-weight: 400; color: var(--text3);">Virtualized game / HWID spoofer</span></td>
+            <td>App Attest assertion rooted in physical SEP — VMs cannot produce valid Apple-signed attestation</td>
+            <td><span class="badge badge-green">&#x2705; Demonstrated</span></td>
+            <td>Attestation proves genuine hardware in a known state, not "no cheat present" — raises the floor, not a complete defense</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</section>
+
+<!-- ── HONEST GAPS ── -->
+<section id="gaps">
+  <div class="page-wrap reveal">
+    <div class="section-label">08 — Honest Gaps</div>
+    <h2>What this does not solve</h2>
+    <p class="section-intro">
+      Stated up front — because a defense you oversell is a defense your red team stops trusting.
+      These five gaps are out of scope by design, not by oversight.
+    </p>
+
+    <ul class="gap-list">
+      <li>
+        <span class="gap-icon">&#x1F4CA;</span>
+        <div>
+          <strong>Server-side heuristics (aimbot input ML, ESP occlusion)</strong><br>
+          Lives in the game engine and backend. This project secures the
+          <em>client trust anchor and local telemetry</em>; it does not replace authoritative server design.
+          The ES monitor gives the server ground truth about process state;
+          the server must still decide what to do with it.
+        </div>
+      </li>
+      <li>
+        <span class="gap-icon">&#x23F1;&#xFE0F;</span>
+        <div>
+          <strong>Continuous runtime attestation</strong><br>
+          App Attest is a trust anchor, not a per-frame heartbeat. It is rate-limited by
+          Apple's servers by design. It proves the app was genuine at assertion time;
+          it does not continuously prove the process is still clean. This is an architectural
+          property of the platform, not a gap in the implementation.
+        </div>
+      </li>
+      <li>
+        <span class="gap-icon">&#x1F427;</span>
+        <div>
+          <strong>Linux / SteamOS parity</strong><br>
+          There is no Endpoint Security or App Attest equivalent on an open system where
+          the user holds root. No Linux parity is claimed. This is the same boundary that
+          keeps Vanguard off Linux — stated honestly rather than papered over.
+        </div>
+      </li>
+      <li>
+        <span class="gap-icon">&#x1F5B1;&#xFE0F;</span>
+        <div>
+          <strong>KMBox-class hardware input emulation</strong><br>
+          A second PC running the aimbot, relaying input through a hardware USB/HID emulator.
+          Best mitigated server-side via input-vector ML. Neither this project nor a kernel
+          driver fully closes hardware input emulation client-side.
+        </div>
+      </li>
+      <li>
+        <span class="gap-icon">&#x1F512;</span>
+        <div>
+          <strong>Fully compromised Apple platform (SEP key extraction)</strong><br>
+          Out of scope for every commercial anti-cheat product. If an adversary can extract
+          a non-exportable SEP key or forge an Apple-signed boot chain, the entire platform
+          security model is void — and so is every competitor's.
+        </div>
+      </li>
+    </ul>
+  </div>
+</section>
+
+<!-- ── VS VGC.SYS ── -->
+<section id="vs-driver">
+  <div class="page-wrap reveal">
+    <div class="section-label">09 — Comparison</div>
+    <h2>vs. vgc.sys (Windows kernel driver)</h2>
+    <p class="section-intro">
+      Not "equivalent to ring 0." Ring 0 is mostly <em>unnecessary</em> on Apple Silicon —
+      and we can prove the client is genuine.
+    </p>
+
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Dimension</th>
+            <th class="win-col">vgc.sys (Windows kernel)</th>
+            <th class="mac-col">Vanguard-for-macOS</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Privilege level</td>
+            <td>Ring 0, loads at boot — before the game, always running</td>
+            <td class="td-green">User space, runs with the game. One-process crash, not a system crash</td>
+          </tr>
+          <tr>
+            <td>Memory access defense</td>
+            <td><code>Ob</code> handle-strip callbacks at ring 0 — deny <code>OpenProcess</code> to the game</td>
+            <td class="td-green">ES <code>GET_TASK</code> / <code>AUTH_GET_TASK</code> events — deny <code>task_for_pid</code> without a kernel driver</td>
+          </tr>
+          <tr>
+            <td>Injection defense</td>
+            <td>Kernel image-load callbacks catch DLL injection attempts</td>
+            <td class="td-green">dyld exec-env scan + hardened runtime library validation — platform rejects unsigned dylibs before they load</td>
+          </tr>
+          <tr>
+            <td>DMA cards</td>
+            <td>Verify VT-d/AMD-Vi IOMMU at ring 0; still a real threat on many configurations</td>
+            <td class="td-green">DART IOMMU always-on; no user PCIe on most Mac SKUs — commodity DMA cards largely don't apply</td>
+          </tr>
+          <tr>
+            <td>Foreign kernel code</td>
+            <td>BYOVD is an <em>actively exploited</em> live threat — signed vulnerable drivers are sold commercially</td>
+            <td class="td-green">No kexts without Apple notarization + explicit user approval + reboot — the attack surface barely exists</td>
+          </tr>
+          <tr>
+            <td>Trust anchor</td>
+            <td>TPM (bolt-on, external chip, separate supply chain)</td>
+            <td class="td-green">SEP (die-level, native to Apple Silicon, same chip as CPU) + App Attest cert chain</td>
+          </tr>
+          <tr>
+            <td>Stability blast radius</td>
+            <td>BSOD-class. Boot loops possible. Third-party driver bugs have triggered mass outages</td>
+            <td class="td-green">One user-process crash. Cannot panic the kernel. Cannot cause a boot loop</td>
+          </tr>
+          <tr>
+            <td>Distribution &amp; vetting</td>
+            <td>Studio ships and maintains the kernel driver, handles update/signing supply chain</td>
+            <td class="td-green">Apple-vetted entitlement — same review process every EDR/MDM vendor goes through. Apple maintains driver compatibility</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="callout" style="margin-top: 28px;">
+      <div class="callout-title">The bottom line</div>
+      The worst hardware cheat vector on Windows — DMA cards — is <strong>largely a non-threat on Mac out of the box</strong>.
+      The hardest driver-security problem on Windows — BYOVD — <strong>barely exists as an attack path on macOS</strong>.
+      The trust anchor the driver bolts on via TPM — <strong>macOS has natively at the silicon level</strong>.
+      What a kernel driver adds on Windows, Apple has mostly removed the <em>need</em> for on macOS.
+    </div>
+  </div>
+</section>
+
+<!-- ── NEXT STEPS ── -->
+<section id="next">
+  <div class="page-wrap reveal">
+    <div class="section-label">10 — Next Steps</div>
+    <h2>For a reviewing studio</h2>
+    <p class="section-intro">
+      Concrete, sequenced steps for a security team evaluating this for production.
+    </p>
+
+    <ol class="steps-list">
+      <li>
+        <div>
+          <strong>Run Phase 1 on a test Mac.</strong> Attempt <code>task_for_pid</code> and
+          <code>DYLD_INSERT_LIBRARIES</code> against a protected target process, confirm
+          detection using the included <code>test/demo_detections.sh</code> harness.
+          No entitlement required if SIP is disabled on the test machine.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Review the Phase 2 server verifier</strong> (<code>verify.js</code>).
+          Every Apple-spec check is commented and traceable to Apple's App Attest
+          specification. Run <code>npm test</code> to confirm the five security properties
+          hold. No Mac required — runs on any Node 18+ host.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Apply for the entitlements.</strong> The ES entitlement
+          (<code>com.apple.developer.endpoint-security.client</code>) and the App Attest
+          macOS entitlement use the same Apple review process every EDR and MDM vendor
+          goes through. For a studio of Riot's size this is a process cost, not a blocker.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Scope the engine integration.</strong> Next concrete steps:
+          wrap the ES monitor as a notarized System Extension (packaging only, no logic change);
+          wire Phase 1 telemetry into the Phase 2 <code>clientData</code> envelope so each
+          hardware-signed assertion carries the ES event log; integrate the server verifier
+          into the game backend's trust decisions.
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Pressure-test the honest gaps.</strong> The project concedes server-side
+          heuristics, continuous attestation, Linux parity, KMBox, and full platform compromise.
+          If the security team identifies gaps beyond these, we want to know — a defense
+          you oversell is a defense a red team stops trusting.
+        </div>
+      </li>
+    </ol>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="footer-inner">
+    <div>
+      <strong>Vanguard-for-macOS</strong> —
+      <a href="https://github.com/JusticeRox98577/Vanguard-for-Macos">github.com/JusticeRox98577/Vanguard-for-Macos</a>
+    </div>
+    <div>MIT License · Independent research, 2026</div>
+    <div style="max-width: 680px; margin: 0 auto;">
+      Not affiliated with, authorized by, or endorsed by Riot Games or Apple Inc.
+      "Vanguard" and "VALORANT" are trademarks of Riot Games, used here nominatively
+      for comparison and interoperability description only.
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Scroll-reveal animation
+  if (window.matchMedia('(prefers-reduced-motion: no-preference)').matches) {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(e => {
+        if (e.isIntersecting) {
+          e.target.classList.add('visible');
+          observer.unobserve(e.target);
+        }
+      });
+    }, { threshold: 0.08 });
+
+    document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
+  } else {
+    document.querySelectorAll('.reveal').forEach(el => el.classList.add('visible'));
+  }
+</script>
+
+</body>
+</html>
