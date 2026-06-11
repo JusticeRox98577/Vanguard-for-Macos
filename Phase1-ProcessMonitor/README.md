@@ -104,6 +104,36 @@ A properly provisioned (Apple-granted) build skips the SIP/AMFI steps entirely
 and runs on stock macOS — that is the production path and the whole point of
 the pitch.
 
+## Running on stock macOS (Apple-granted entitlement, no SIP changes)
+
+This is the production path — and the credible one for a game-studio pitch:
+"runs on an unmodified Mac" beats "works once you disable SIP."
+
+1. **Request the entitlement.** Apply for `com.apple.developer.endpoint-security.client`
+   via Apple's [Endpoint Security request form](https://developer.apple.com/contact/request/system-extension/).
+   Approval typically takes a few days. Once granted, it attaches to your Team.
+2. **Make a provisioning profile.** In the Developer portal, create an App ID
+   (e.g. `com.yourteam.vanguard-monitor`) with the Endpoint Security
+   capability, then generate and download a provisioning profile for it that
+   includes the entitlement.
+3. **Build the signed bundle.** A restricted entitlement must be authorized by
+   an *embedded provisioning profile*, which a bare executable can't carry — so
+   the `release` target wraps the binary in a `.app`:
+   ```sh
+   make release \
+     SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)" \
+     PROFILE=~/Downloads/Vanguard_Monitor.provisionprofile \
+     APP_BUNDLE_ID=com.yourteam.vanguard-monitor
+   sudo build/Vanguard.app/Contents/MacOS/vanguard_monitor MyGame
+   ```
+
+**Honest caveat on distribution form.** A Developer-ID-signed bundle run as
+root (above) is right for development and a local demo. For shipping to end
+users (gamers), the fully-supported delivery vehicle is a **notarized System
+Extension** hosted by a container app that activates it via the
+`SystemExtensions` framework — that's a further packaging step, not a change to
+the monitor logic. Ask and we can scaffold it.
+
 ---
 
 ## Example output

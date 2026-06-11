@@ -56,5 +56,52 @@ sign: $(BUILD)/$(BIN)
 run: all
 	sudo $(BUILD)/$(BIN) $(TARGET)
 
+# -----------------------------------------------------------------------------
+# Signed release — runs on STOCK macOS (no SIP disabling) once Apple has
+# granted your Team the Endpoint Security entitlement.
+#
+# A restricted entitlement must be authorized by a provisioning profile, and a
+# bare Mach-O can't embed one — so we package the executable in a .app bundle
+# (still run as root) and embed the profile at Contents/embedded.provisionprofile.
+#
+# Required variables (all three):
+#   SIGN_IDENTITY="Developer ID Application: Your Name (TEAMID)"
+#   PROFILE=/path/to/Vanguard_Monitor.provisionprofile   # must list the ES entitlement
+#   APP_BUNDLE_ID=com.yourteam.vanguard-monitor          # must match the profile's App ID
+#
+# Example:
+#   make release \
+#     SIGN_IDENTITY="Developer ID Application: Jane Dev (AB12CD34EF)" \
+#     PROFILE=~/Downloads/Vanguard_Monitor.provisionprofile \
+#     APP_BUNDLE_ID=com.janedev.vanguard-monitor
+RELEASE_APP   := $(BUILD)/Vanguard.app
+APP_BUNDLE_ID ?= com.example.vanguard-monitor
+
+.PHONY: release
+release: | $(BUILD)
+	@test -n "$(PROFILE)" || { echo "ERROR: set PROFILE=/path/to/your.provisionprofile"; exit 1; }
+	@test "$(SIGN_IDENTITY)" != "-" || { echo "ERROR: set SIGN_IDENTITY to your Developer ID (not ad-hoc '-')"; exit 1; }
+	$(CC) $(CFLAGS) $(SRC) -o $(BUILD)/$(BIN) $(LDFLAGS)
+	mkdir -p $(RELEASE_APP)/Contents/MacOS
+	cp $(BUILD)/$(BIN) $(RELEASE_APP)/Contents/MacOS/$(BIN)
+	printf '%s\n' \
+	  '<?xml version="1.0" encoding="UTF-8"?>' \
+	  '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' \
+	  '<plist version="1.0"><dict>' \
+	  '  <key>CFBundleIdentifier</key><string>$(APP_BUNDLE_ID)</string>' \
+	  '  <key>CFBundleName</key><string>Vanguard</string>' \
+	  '  <key>CFBundleExecutable</key><string>$(BIN)</string>' \
+	  '  <key>CFBundlePackageType</key><string>APPL</string>' \
+	  '</dict></plist>' > $(RELEASE_APP)/Contents/Info.plist
+	cp "$(PROFILE)" $(RELEASE_APP)/Contents/embedded.provisionprofile
+	codesign --force --sign "$(SIGN_IDENTITY)" \
+		--entitlements $(ENTITLEMENTS) \
+		--options runtime --timestamp \
+		$(RELEASE_APP)
+	@echo "built signed bundle: $(RELEASE_APP)"
+	@echo "verify: codesign -dv --entitlements - $(RELEASE_APP)"
+	@echo "run:    sudo $(RELEASE_APP)/Contents/MacOS/$(BIN) <target>"
+	@echo "NOTE: notarize before distributing — xcrun notarytool submit ..."
+
 clean:
 	rm -rf $(BUILD)
