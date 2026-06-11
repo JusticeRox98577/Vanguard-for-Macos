@@ -1,7 +1,7 @@
 # Phase 3 — Research Submission: Hardware-Anchored Anti-Cheat on macOS
 
 This folder is the deliverable for a game developer's security research team.
-It packages the working PoC (Phase 1, with Phase 2 planned) into the pitch
+It packages the working PoC (Phase 1 and Phase 2 built) into the pitch
 structure a reviewing engineer expects: problem statement, threat model,
 architecture, and operational impact — with the gaps stated plainly.
 
@@ -33,7 +33,8 @@ remains is delivered to user space through two Apple-supported channels:
    agent. *Demonstrated in this repo (Phase 1).*
 2. **Secure Enclave + App Attest** — a hardware-rooted, Apple-co-signed proof
    that the agent is genuine, unmodified, and running on real hardware.
-   *Planned (Phase 2).*
+   *Built (Phase 2): SEP key custody, attestation, and per-request assertions,
+   with a from-scratch Apple-cert-chain verifier server.*
 
 **The inversion that makes it work.** The client agent does not need to be
 *unbreakable* (no client is); it needs to be *unforgeable*. Trust decisions
@@ -73,7 +74,7 @@ capability-by-platform matrix, and the client→hardware→server data-flow
 diagram. The architecture is deliberately split into:
 
 - **What this repo proves:** the ES monitor (Phase 1, built) and the
-  SEP/App Attest trust chain (Phase 2, planned).
+  SEP/App Attest trust chain (Phase 2, built).
 - **What the game engine/backend owns:** input-vector ML, occlusion-aware
   authoritative state — referenced, not reimplemented.
 

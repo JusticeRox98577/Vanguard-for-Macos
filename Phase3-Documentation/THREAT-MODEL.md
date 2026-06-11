@@ -107,7 +107,7 @@ Run the game in a guest while cheats run on the host, invisible to the guest.
 | | Windows | macOS |
 |---|---|---|
 | Mitigation | Hardware attestation (TPM quote) proves boot measurements; AC can refuse to run virtualized | **App Attest** assertion is rooted in the physical SEP of a genuine Apple device; a VM cannot produce a valid Apple-signed hardware attestation |
-| Status in this PoC | **Designed** | **Planned** (Phase 2 attestation chain) |
+| Status in this PoC | **Designed** | **Demonstrated** (Phase 2 attestation chain) |
 | Residual gap | Attestation proves "genuine hardware in a known state," not "no cheat present" — it raises the floor (no trivial VM farming / no spoofed HWID) but is one layer, not the whole defense |
 
 ---

@@ -17,7 +17,7 @@ attestation that the client and host are genuine and in a known boot state.
 
 - **macOS:** Secure Enclave (SEP) generates a non-exportable key; **App
   Attest** produces an Apple-signed assertion that the app is genuine and
-  unmodified, rooted in that physical SEP. *(Phase 2 — planned in this repo.)*
+  unmodified, rooted in that physical SEP. *(Phase 2 — built in this repo.)*
 - **Windows:** TPM 2.0 + Measured/Secure Boot produce a quote over the boot
   measurements. *(Designed.)*
 - **Explicitly NOT claimed:** running detection heuristics *inside* an enclave.
@@ -60,14 +60,14 @@ the platform's IOMMU; on macOS, note the structural advantage.
 
 | Capability | Windows | macOS | In this PoC |
 |---|---|---|---|
-| Boot-state trust | TPM 2.0 + Secure Boot quote | SEP-rooted Secure Boot + App Attest | Phase 2 (planned) |
-| Key custody | TPM-bound key | Secure Enclave non-exportable key | Phase 2 (planned) |
+| Boot-state trust | TPM 2.0 + Secure Boot quote | SEP-rooted Secure Boot + App Attest | Phase 2 ✅ built |
+| Key custody | TPM-bound key | Secure Enclave non-exportable key | Phase 2 ✅ built |
 | Process / memory telemetry | Kernel callbacks (driver) | **Endpoint Security** (user-space, no kext) | Phase 1 ✅ built |
 | Block memory access to game | `Ob` handle-strip (ring 0) | ES `AUTH_GET_TASK` deny (user-space) | Phase 1 ✅ (observe only) |
 | Injection defense | Image-load callbacks | dyld env scan + Apple **library validation** | Phase 1 ✅ built |
 | DMA defense | Verify VT-d/AMD-Vi | DART + no PCIe on most SKUs | Designed |
 | Input / ESP defense | Server-side ML + occlusion | Server-side ML + occlusion | External (engine) |
-| Anti-VM | TPM quote | App Attest (can't run on a VM) | Phase 2 (planned) |
+| Anti-VM | TPM quote | App Attest (can't run on a VM) | Phase 2 ✅ built |
 
 The headline: macOS reaches a comparable security posture **without a kernel
 driver**, because the platform already supplies vetted kernel telemetry (ES)
@@ -145,7 +145,7 @@ and it is exactly what Phases 1 and 2 of this repo demonstrate end to end.
 | Component | State |
 |---|---|
 | Endpoint Security monitor (exec/fork/exit, task-port, dyld injection) | **Built** — `Phase1-ProcessMonitor/` |
-| Secure Enclave key + App Attest assertion + verification server | **Planned** — Phase 2 of this repo |
+| Secure Enclave key + App Attest assertion + verification server | **Built** — `Phase2-Attestation/` (server tested; client runs on-device only) |
 | `AUTH_GET_TASK` active *denial* of task ports | Designed; hook noted in Phase 1 source |
 | Server-side input ML / occlusion culling | External to this project (engine/backend) |
 | Windows TPM/VBS path | Described for completeness; not implemented |

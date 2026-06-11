@@ -25,7 +25,7 @@ attestation that proves the client and the host are genuine.
 | Phase | Focus | Status |
 |---|---|---|
 | **1 — Process Monitor** | Endpoint Security client: process lifecycle, task-port (memory) access, dylib-injection detection, timestamped logging. | ✅ Implemented — [`Phase1-ProcessMonitor/`](Phase1-ProcessMonitor/) |
-| **2 — Hardware Attestation** | Secure Enclave key generation + App Attest assertion, verified by a small server. Demonstrates the full client→Apple→server trust chain. | ⏳ Planned |
+| **2 — Hardware Attestation** | Secure Enclave key generation + App Attest assertion, verified by a small server. Demonstrates the full client→Apple→server trust chain. | ✅ Implemented — [`Phase2-Attestation/`](Phase2-Attestation/) (server tested; client runs on-device only) |
 | **3 — Documentation** | Threat model, architecture, and pitch packaging with honest gap analysis, for a game studio's security team. | 📝 Drafted — [`Phase3-Documentation/`](Phase3-Documentation/) (final pass after Phase 2 is built) |
 
 ## Repository layout
@@ -39,6 +39,10 @@ Vanguard-for-Macos/
 │   ├── entitlements/             #   the one ES entitlement, explained
 │   ├── Makefile                  #   build + ad-hoc codesign + run
 │   └── README.md                 #   build/run, entitlements, anti-cheat mapping
+├── Phase2-Attestation/           # Phase 2 — SEP + App Attest trust chain
+│   ├── client/                   #   Swift: SEP key custody + App Attest
+│   ├── server/                   #   Node.js verifier (Apple cert chain checks)
+│   └── README.md                 #   run both halves, honesty notes
 └── Phase3-Documentation/         # Phase 3 — research submission (drafted)
     ├── README.md                 #   executive summary, pitch, perf & privacy
     ├── THREAT-MODEL.md           #   vectors → mitigations → honest gaps
