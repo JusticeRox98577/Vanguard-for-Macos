@@ -151,14 +151,11 @@ func runAppAttest() {
     log("— Step 2: App Attest key + Apple-certified attestation —")
 
     let service = DCAppAttestService.shared
-    guard service.isSupported else {
-        fail("""
-        App Attest is not supported in this process. Checklist:
-          - Apple Silicon Mac, macOS 11+
-          - app bundle signed with a provisioning profile that includes the
-            App Attest entitlement and your Team's application-identifier
-        See Phase2-Attestation/README.md.
-        """)
+    // On macOS, isSupported checks for the appattest-environment entitlement which
+    // macOS provisioning profiles don't include. Attempt the API directly; if the
+    // platform doesn't support it, generateKey will surface a clear error.
+    if !service.isSupported {
+        log("  NOTE: isSupported=false (expected on macOS without appattest-environment entitlement); attempting API anyway")
     }
 
     let sem = DispatchSemaphore(value: 0)
